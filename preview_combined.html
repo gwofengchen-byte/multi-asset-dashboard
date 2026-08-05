@@ -1,0 +1,771 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>台股追蹤總覽</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0a0c10;color:#e6edf3;font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+#shell{display:flex;min-height:100vh}
+#sidebar{
+  width:96px;flex:0 0 96px;background:#12151c;border-right:1px solid #23283333;
+  display:flex;flex-direction:column;align-items:stretch;padding:14px 8px;gap:6px;position:sticky;top:0;height:100vh;
+}
+#sidebar .brand{font-size:11px;color:#6b7482;text-align:center;padding:4px 2px 12px;line-height:1.4;border-bottom:1px solid #232833;margin-bottom:6px}
+.navbtn{
+  background:none;border:1px solid transparent;color:#9aa1ac;border-radius:10px;
+  padding:10px 6px;font-size:11.5px;line-height:1.3;cursor:pointer;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.navbtn .ic{font-size:19px}
+.navbtn:hover{background:#1b202b;color:#e6edf3}
+.navbtn.active{background:#1e2836;color:#fff;border-color:#3a4a63}
+#main{flex:1;min-width:0;overflow-x:hidden}
+.view{display:none}
+.view.active{display:block}
+@media (max-width:720px){
+  #shell{flex-direction:column}
+  #sidebar{
+    width:100%;flex:0 0 auto;height:auto;position:sticky;top:0;z-index:20;
+    flex-direction:row;overflow-x:auto;padding:8px 10px;gap:8px;align-items:center;
+    border-right:none;border-bottom:1px solid #23283333;
+  }
+  #sidebar .brand{display:none}
+  .navbtn{flex-direction:row;padding:8px 12px;white-space:nowrap}
+}
+
+#app-multi{--bg:#0e1116;--cd:#161b23;--bd:#252c37;--tx:#e6edf3;--mu:#8b949e;--px:#e6edf3;--e20:#f0a83c;--e60:#5aa9f0;--hi:#e05a5a;--lo:#3fa66a;--dea:#b07ef0;--rsi:#5aa9f0}
+#app-multi *{box-sizing:border-box}
+#app-multi{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.6}
+#app-multi .wrap{max-width:860px;margin:0 auto;padding:18px 14px 60px}
+#app-multi h1{font-size:20px;margin:0 0 4px}
+#app-multi .sub{color:var(--mu);font-size:13px}
+#app-multi .nav{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 18px}
+#app-multi .nav a{background:var(--cd);border:1px solid var(--bd);color:var(--tx);text-decoration:none;padding:5px 11px;border-radius:999px;font-size:13px}
+#app-multi .panel, #app-multi .card{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+#app-multi .panel h2{font-size:16px;margin:0 0 8px}
+#app-multi .panel ul{margin:0;padding-left:18px}
+#app-multi .panel li{margin:3px 0}
+#app-multi .none{color:var(--mu);list-style:none;margin-left:-18px}
+#app-multi .hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#app-multi .hd h2{font-size:17px;margin:0}
+#app-multi .nm{color:var(--mu);font-weight:400;font-size:14px}
+#app-multi .bd{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid}
+#app-multi .bd.on{color:#ffb454;border-color:#6b4c14;background:#2b1f0c}
+#app-multi .bd.off{color:var(--mu);border-color:var(--bd)}
+#app-multi .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin:12px 0}
+#app-multi .k{background:#0f141b;border:1px solid var(--bd);border-radius:8px;padding:7px 9px}
+#app-multi .k span{display:block;font-size:11px;color:var(--mu)}
+#app-multi .k b{font-size:15px;font-variant-numeric:tabular-nums}
+#app-multi .k i{display:block;font-size:11px;color:var(--mu);font-style:normal}
+#app-multi .val{font-size:12.5px;color:var(--mu);background:#0f141b;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:10px}
+#app-multi .val b{color:var(--tx)}
+#app-multi .tg{margin:0 0 12px;padding-left:18px;font-size:14px}
+#app-multi .tg li{margin:2px 0;color:#ffb454}
+#app-multi .tg li.none{color:var(--mu)}
+#app-multi .cw{margin:14px 0}
+#app-multi .ct{font-size:12px;color:var(--mu);margin-bottom:3px}
+#app-multi .ch svg{width:100%;height:auto;display:block;background:#0f141b;border:1px solid var(--bd);border-radius:8px}
+#app-multi .g{stroke:#222a34;stroke-width:1}
+#app-multi .zero{stroke:#3a4450;stroke-width:1}
+#app-multi .r70{stroke:#e05a5a;stroke-dasharray:4 3;opacity:.7}
+#app-multi .r30{stroke:#3fa66a;stroke-dasharray:4 3;opacity:.7}
+#app-multi .r50{stroke:#3a4450;stroke-dasharray:2 4}
+#app-multi .ax{fill:#7d8794;font-size:10px}
+#app-multi .l{fill:none;stroke-width:1.7}
+#app-multi .px{stroke:var(--px);stroke-width:2}
+#app-multi .e20{stroke:var(--e20)}
+#app-multi .e60{stroke:var(--e60)}
+#app-multi .hi{stroke:var(--hi);stroke-dasharray:5 4;stroke-width:1.2;opacity:.75}
+#app-multi .lo{stroke:var(--lo);stroke-dasharray:5 4;stroke-width:1.2;opacity:.75}
+#app-multi .rsi{stroke:var(--rsi)}
+#app-multi .dif{stroke:var(--e20)}
+#app-multi .dea{stroke:var(--dea)}
+#app-multi .bu{fill:#e05a5a;opacity:.75}
+#app-multi .bdn{fill:#3fa66a;opacity:.75}
+#app-multi .lg{font-size:11px;color:var(--mu);margin-top:4px;display:flex;flex-wrap:wrap;align-items:center}
+#app-multi .sw{display:inline-block;width:14px;height:3px;border-radius:2px;margin:0 4px 0 10px}
+#app-multi .sw.px{background:var(--px)}
+#app-multi .sw.e20{background:var(--e20)}
+#app-multi .sw.e60{background:var(--e60)}
+#app-multi .sw.hi{background:var(--hi)}
+#app-multi .sw.lo{background:var(--lo)}
+#app-multi .sw.dif{background:var(--e20)}
+#app-multi .sw.dea{background:var(--dea)}
+#app-multi .sw.osc{background:#8b949e}
+#app-multi footer{color:var(--mu);font-size:12px;border-top:1px solid var(--bd);padding-top:14px;margin-top:26px}
+#app-multi table{width:100%;border-collapse:collapse;font-size:13px}
+#app-multi th, #app-multi td{border-bottom:1px solid var(--bd);padding:6px 4px;text-align:right;font-variant-numeric:tabular-nums}
+#app-multi th:first-child, #app-multi td:first-child{text-align:left}
+#app-multi th{color:var(--mu);font-weight:500;font-size:12px}
+#app-multi .ovf{overflow-x:auto}
+#app-live{
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e8eaed;
+    --text-secondary: #9aa1ac;
+    --accent: #4f8cff;
+    --green: #3ecf8e;
+    --red: #ff5c5c;
+    --amber: #f2b84b;
+  }
+#app-live *{ box-sizing: border-box; }
+#app-live{
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+#app-live .wrap{ max-width: 1100px; margin: 0 auto; }
+#app-live header{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+#app-live h1{ font-size: 20px; font-weight: 600; margin: 0; }
+#app-live .sub{ color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+#app-live .header-actions{ display: flex; gap: 8px; align-items: center; }
+#app-live button{
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+  }
+#app-live button:hover{ border-color: var(--accent); }
+#app-live button.primary{ background: var(--accent); border-color: var(--accent); color: #fff; }
+#app-live select{
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 14px;
+  }
+#app-live #settings-panel{
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 20px; display: none;
+  }
+#app-live #settings-panel.show{ display: block; }
+#app-live #settings-panel label{ display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; margin-top: 10px; }
+#app-live #settings-panel input{
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  }
+#app-live #settings-panel .hint{ font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.6; }
+#app-live .price-row{ display: flex; align-items: baseline; gap: 12px; margin: 20px 0 16px; flex-wrap: wrap; }
+#app-live .price-row .price{ font-size: 40px; font-weight: 500; }
+#app-live .price-row .change{ font-size: 16px; font-weight: 500; }
+#app-live .price-row .date{ font-size: 13px; color: var(--text-secondary); }
+#app-live .up{ color: var(--red); }
+#app-live /* 台股習慣紅漲綠跌 */
+  .down{ color: var(--green); }
+#app-live .metrics{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+#app-live .metric-card{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+#app-live .metric-card .label{ font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+#app-live .metric-card .value{ font-size: 22px; font-weight: 500; }
+#app-live .dims{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 20px; }
+#app-live .dim-card{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+#app-live .dim-card .dim-header{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+#app-live .dim-card .dim-title{ font-size: 14px; font-weight: 600; }
+#app-live .badge{ font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
+#app-live .badge.success{ background: rgba(62,207,142,0.15); color: var(--green); }
+#app-live .badge.warning{ background: rgba(242,184,75,0.15); color: var(--amber); }
+#app-live .badge.danger{ background: rgba(255,92,92,0.15); color: var(--red); }
+#app-live .badge.neutral{ background: rgba(154,161,172,0.15); color: var(--text-secondary); }
+#app-live table{ width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#app-live table th, #app-live table td{ text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+#app-live table th:first-child, #app-live table td:first-child{ text-align: left; }
+#app-live table th{ color: var(--text-secondary); font-weight: 500; }
+#app-live .dim-card{ overflow-x: auto; }
+#app-live .kv{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 13px; }
+#app-live .kv div span:first-child{ color: var(--text-secondary); white-space: nowrap; }
+#app-live .kv div span:last-child{ white-space: nowrap; margin-left: 8px; }
+#app-live .kv div{ display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--border); }
+#app-live footer{ font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border); padding-top: 14px; margin-top: 24px; line-height: 1.7; }
+#app-live #loading, #app-live #error{ padding: 40px; text-align: center; color: var(--text-secondary); }
+#app-live #error{ color: var(--red); }
+</style></head>
+<body>
+<div id="shell">
+  <nav id="sidebar">
+    <div class="brand">台股<br>追蹤總覽</div>
+    <button class="navbtn" data-view="multi"><span class="ic">📊</span><span>多資產<br>觸發追蹤</span></button>
+    <button class="navbtn" data-view="live"><span class="ic">📈</span><span>個股即時<br>儀表板</span></button>
+  </nav>
+  <main id="main">
+    <div id="app-multi" class="view"><div class="wrap"><h1>多資產技術面觸發追蹤</h1><div class="sub">資料日期 <b>2026/08/04</b>（TWSE 官方 STOCK_DAY 收盤資料）｜報告產出 2026/08/04<br>樣本區間 2026/04/01–08/04，共 85 個交易日</div><nav class="nav"><a href="#s0050">0050</a><a href="#s2330">2330</a><a href="#s00878">00878</a><a href="#s00919">00919</a><a href="#s0056">0056</a><a href="#s00981A">00981A</a></nav><div class="panel"><h2>本日觸發彙總（共 4 項）</h2><ul><li><b>0050</b> 元大台灣50：跌破EMA20（收盤100.65 < EMA20 101.59）</li><li><b>2330</b> 台積電：跌破EMA20（收盤2320.0 < EMA20 2353.91）</li><li><b>0056</b> 元大高股息：站上EMA20（收盤50.6 > EMA20 50.10）</li><li><b>00981A</b> 主動統一台股增長：站上EMA20（收盤27.58 > EMA20 27.51）</li></ul></div><div class="panel"><h2>六檔一覽</h2><div class="ovf"><table><tr><th>代號</th><th>名稱</th><th>收盤</th><th>RSI(14)</th><th>EMA20</th><th>EMA60</th><th>前20日高</th><th>前20日低</th><th>觸發數</th></tr><tr><td>0050</td><td>元大台灣50</td><td>100.65</td><td>47.6</td><td>101.59</td><td>99.52</td><td>109.60</td><td>91.80</td><td>1</td></tr><tr><td>2330</td><td>台積電</td><td>2,320.00</td><td>47.4</td><td>2,353.91</td><td>2,309.95</td><td>2,500.00</td><td>2,180.00</td><td>1</td></tr><tr><td>00878</td><td>國泰永續高股息</td><td>32.57</td><td>52.8</td><td>32.29</td><td>30.65</td><td>33.79</td><td>30.30</td><td>0</td></tr><tr><td>00919</td><td>群益台灣精選高息</td><td>29.51</td><td>52.6</td><td>29.30</td><td>28.13</td><td>30.17</td><td>27.95</td><td>0</td></tr><tr><td>0056</td><td>元大高股息</td><td>50.60</td><td>51.5</td><td>50.10</td><td>48.59</td><td>53.95</td><td>45.84</td><td>1</td></tr><tr><td>00981A</td><td>主動統一台股增長</td><td>27.58</td><td>48.5</td><td>27.51</td><td>28.19</td><td>32.45</td><td>23.20</td><td>1</td></tr></table></div></div><section class="card" id="s0050" data-code="0050"><div class="hd"><h2>0050 <span class="nm">元大台灣50</span></h2><span class="bd on">有觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>100.65</b></div><div class="k"><span>RSI(14)</span><b>47.6</b></div><div class="k"><span>EMA20</span><b>101.59</b><i>價在下方</i></div><div class="k"><span>EMA60</span><b>99.52</b><i>價在上方</i></div><div class="k"><span>前20日高</span><b>109.60</b></div><div class="k"><span>前20日低</span><b>91.80</b></div><div class="k"><span>MACD DIF</span><b>-1.34</b></div><div class="k"><span>DEA / OSC</span><b>-1.10 / -0.24</b></div></div><ul class="tg"><li>跌破EMA20（收盤100.65 < EMA20 101.59）</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><section class="card" id="s2330" data-code="2330"><div class="hd"><h2>2330 <span class="nm">台積電</span></h2><span class="bd on">有觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>2,320.00</b></div><div class="k"><span>RSI(14)</span><b>47.4</b></div><div class="k"><span>EMA20</span><b>2,353.91</b><i>價在下方</i></div><div class="k"><span>EMA60</span><b>2,309.95</b><i>價在上方</i></div><div class="k"><span>前20日高</span><b>2,500.00</b></div><div class="k"><span>前20日低</span><b>2,180.00</b></div><div class="k"><span>MACD DIF</span><b>-17.49</b></div><div class="k"><span>DEA / OSC</span><b>-11.19 / -6.31</b></div></div><div class="val">2026E EPS <b>106.15</b> 元（花旗預估；來源：Drive「2026_台積電總體資料_20260727_更新版.xlsx」評價面 B6）｜17x <b>1,805</b>｜20x <b>2,123</b>｜26x <b>2,760</b>｜現價隱含 <b>21.9x</b>｜KD(9,3,3) <b>53.9 / 44.2</b></div><ul class="tg"><li>跌破EMA20（收盤2320.0 < EMA20 2353.91）</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><section class="card" id="s00878" data-code="00878"><div class="hd"><h2>00878 <span class="nm">國泰永續高股息</span></h2><span class="bd off">無觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>32.57</b></div><div class="k"><span>RSI(14)</span><b>52.8</b></div><div class="k"><span>EMA20</span><b>32.29</b><i>價在上方</i></div><div class="k"><span>EMA60</span><b>30.65</b><i>價在上方</i></div><div class="k"><span>前20日高</span><b>33.79</b></div><div class="k"><span>前20日低</span><b>30.30</b></div><div class="k"><span>MACD DIF</span><b>-0.06</b></div><div class="k"><span>DEA / OSC</span><b>-0.01 / -0.05</b></div></div><ul class="tg"><li class="none">本日無觸發</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><section class="card" id="s00919" data-code="00919"><div class="hd"><h2>00919 <span class="nm">群益台灣精選高息</span></h2><span class="bd off">無觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>29.51</b></div><div class="k"><span>RSI(14)</span><b>52.6</b></div><div class="k"><span>EMA20</span><b>29.30</b><i>價在上方</i></div><div class="k"><span>EMA60</span><b>28.13</b><i>價在上方</i></div><div class="k"><span>前20日高</span><b>30.17</b></div><div class="k"><span>前20日低</span><b>27.95</b></div><div class="k"><span>MACD DIF</span><b>-0.04</b></div><div class="k"><span>DEA / OSC</span><b>-0.03 / -0.01</b></div></div><ul class="tg"><li class="none">本日無觸發</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><section class="card" id="s0056" data-code="0056"><div class="hd"><h2>0056 <span class="nm">元大高股息</span></h2><span class="bd on">有觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>50.60</b></div><div class="k"><span>RSI(14)</span><b>51.5</b></div><div class="k"><span>EMA20</span><b>50.10</b><i>價在上方</i></div><div class="k"><span>EMA60</span><b>48.59</b><i>價在上方</i></div><div class="k"><span>前20日高</span><b>53.95</b></div><div class="k"><span>前20日低</span><b>45.84</b></div><div class="k"><span>MACD DIF</span><b>-0.60</b></div><div class="k"><span>DEA / OSC</span><b>-0.47 / -0.13</b></div></div><ul class="tg"><li>站上EMA20（收盤50.6 > EMA20 50.10）</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><section class="card" id="s00981A" data-code="00981A"><div class="hd"><h2>00981A <span class="nm">主動統一台股增長</span></h2><span class="bd on">有觸發</span></div><div class="kpis"><div class="k"><span>收盤</span><b>27.58</b></div><div class="k"><span>RSI(14)</span><b>48.5</b></div><div class="k"><span>EMA20</span><b>27.51</b><i>價在上方</i></div><div class="k"><span>EMA60</span><b>28.19</b><i>價在下方</i></div><div class="k"><span>前20日高</span><b>32.45</b></div><div class="k"><span>前20日低</span><b>23.20</b></div><div class="k"><span>MACD DIF</span><b>-1.04</b></div><div class="k"><span>DEA / OSC</span><b>-1.03 / -0.01</b></div></div><ul class="tg"><li>站上EMA20（收盤27.58 > EMA20 27.51）</li></ul><div class="cw"><div class="ct">價格 ＋ EMA20 / EMA60 ＋ 前20日高低</div><div class="ch" data-k="price"></div><div class="lg"><i class="sw px"></i>收盤<i class="sw e20"></i>EMA20<i class="sw e60"></i>EMA60<i class="sw hi"></i>20日高<i class="sw lo"></i>20日低</div></div><div class="cw"><div class="ct">RSI(14)（Wilder 平滑，虛線為 70／30）</div><div class="ch" data-k="rsi"></div></div><div class="cw"><div class="ct">MACD(12,26,9)</div><div class="ch" data-k="macd"></div><div class="lg"><i class="sw dif"></i>DIF<i class="sw dea"></i>DEA<i class="sw osc"></i>柱狀體</div></div></section><footer><b>資料來源</b>：台灣證券交易所 STOCK_DAY 官方 API（<code>www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY</code>），擷取時間 2026/08/04，最新收盤日 2026/08/04（民國 115/08/04）。台積電 2026E EPS 106.15 元取自 Google Drive「2026_台積電總體資料_20260727_更新版.xlsx」評價面工作表（花旗 2026/7 法說前預估），屬第三方預估值而非公司財測，實際結果可能與預估有明顯差距。<br><br><b>計算說明</b>：EMA 以前 N 日簡單平均為起始值後遞迴；RSI(14) 採 Wilder 平滑；MACD 為 EMA12−EMA26 得 DIF，DIF 之 9 日 EMA 得 DEA，柱狀體＝DIF−DEA；20 日高／低不含當日；KD(9,3,3) 初始 K=D=50。因樣本自 2026/04/01 起算，EMA60 自第 60 個交易日方有數值，序列長度有限，其平滑結果與使用更長歷史計算者可能略有差異，數值宜作相對參考而非絕對水準判讀。<br><br><b>免責聲明</b>：本頁為量化指標的機械化呈現，<b>僅供參考，非投資建議</b>。技術指標本質上具落後性，觸發訊號不代表未來報酬方向，單一訊號亦可能為雜訊；價格走勢同時受總體環境、資金面與個別事件影響，未必反映於本頁指標。任何投資決策請自行評估風險承受度與財務狀況，必要時諮詢合格專業人士。
+</footer></div></div>
+    <div id="app-live" class="view"><div class="wrap">
+  <header>
+    <div>
+      <h1>台股趨勢股追蹤儀表板</h1>
+      <div class="sub" id="last-updated">尚未載入資料</div>
+    </div>
+    <div class="header-actions">
+      <select id="stock-select"></select>
+      <button id="refresh-btn">重新整理</button>
+      <button id="settings-btn">設定</button>
+    </div>
+  </header>
+
+  <div id="settings-panel">
+    <label>Supabase Project URL</label>
+    <input id="input-url" placeholder="https://xxxxxxxx.supabase.co">
+    <label>anon (public) key</label>
+    <input id="input-key" placeholder="貼上 anon / publishable key（不是service_role）">
+    <div class="hint">
+      這兩個值存在你瀏覽器本機(localStorage)，不會上傳到任何地方。<br>
+      請在Supabase專案的 Settings → API Keys 拿 anon/public key（千萬不要用service_role key，那是給後台腳本用的）。<br>
+      這個儀表板只會讀取資料(SELECT)，前提是你已經在Supabase SQL Editor執行過 dashboard_rls_policies.sql 開放唯讀權限。
+    </div>
+    <button class="primary" id="save-settings-btn" style="margin-top:12px;">儲存並載入</button>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="price-row">
+      <div class="price" id="price-value">--</div>
+      <div class="change" id="price-change">--</div>
+      <div class="date" id="price-date">--</div>
+    </div>
+
+    <div class="metrics" id="metrics"></div>
+    <div class="dims" id="dims"></div>
+
+    <div class="dim-card" style="margin-bottom:20px;">
+      <div class="dim-header">
+        <div class="dim-title">模組化評價模型</div>
+        <span class="badge neutral" id="valmodel-badge">--</span>
+      </div>
+      <div class="kv" id="valmodel-kv"></div>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">
+          輸入你自己預估的EPS，自動算出對應歷史PE百分位區間的合理股價區間：
+        </label>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input id="forecast-eps-input" type="number" step="0.01" placeholder="例如 30"
+            style="background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:8px 10px; font-size:13px; width:140px;">
+          <button class="primary" id="calc-btn">計算</button>
+        </div>
+        <div id="valmodel-calc-result" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="dim-card" style="margin-bottom:20px;">
+      <div class="dim-header">
+        <div class="dim-title">分析師目標價彙整</div>
+        <span class="badge neutral" id="estimate-count-badge">--</span>
+      </div>
+      <div id="estimates-body"></div>
+    </div>
+
+    <footer id="footer-note"></footer>
+  </div>
+
+  <div id="loading">載入中...</div>
+  <div id="error" style="display:none;"></div>
+</div></div>
+  </main>
+</div>
+<script>
+var RAW={"0050":"0401,75.6,74.6,75.45;0402,76.05,73.8,73.95;0407,75.45,74.65,75.3;0408,79.25,78.1,79.2;0409,79.4,78.8,79.15;0410,80.8,79.95,80.75;0413,81,80.4,80.6;0414,83.2,81.75,83.1;0415,85.1,83.8,84.15;0416,85.1,84.15,85;0417,84.5,84,84.15;0420,85.1,84.45,84.55;0421,86.1,85,86;0422,86.6,85.55,86.35;0423,88.8,85.15,86.35;0424,89.95,87.55,89.95;0427,94.25,92.7,93;0428,93.65,91.9,92;0429,91.5,90,90.75;0430,91.9,90.3,90.5;0504,94.65,92.4,94.6;0505,94.75,94,94.6;0506,96.9,94.7,95.75;0507,98.4,97.4,97.7;0508,97.7,95.85,97;0511,97.15,96.5,96.9;0512,97.35,95.5,96.85;0513,95.8,94.7,95.5;0514,97.2,95.75,96.05;0515,98.25,95.2,95.4;0518,95.2,93.3,94.9;0519,94.7,93.1,93.1;0520,93.5,92.45,92.5;0521,96.05,94.7,95.85;0522,97.3,96,97.3;0525,101,99.55,100.8;0526,101.8,100.1,100.1;0527,103.9,102,102.55;0528,104.25,100.1,100.5;0529,105.4,102.7,105.4;0601,106.7,104.5,105.5;0602,106.3,104.2,105.7;0603,107.85,107.1,107.6;0604,107,106.05,106.1;0605,105.35,102.8,104.15;0608,101.3,98.05,100.95;0609,103.6,101.35,103.5;0610,102.95,100.2,100.25;0611,100.55,97.6,99.85;0612,103.75,101.55,101.95;0615,105.5,104.3,105.25;0616,106.05,104.85,105.9;0617,106,104.5,106;0618,107.45,106.65,107.3;0622,111.2,109.45,111.15;0623,112.3,110.05,110.1;0624,108.1,106.15,107.15;0625,108.05,106.35,107.2;0626,105.85,102.8,103.1;0629,105.35,103.3,104.45;0630,108.25,106.75,107.8;0701,109.95,108.6,109.35;0702,108.95,106.9,108.8;0703,108.8,106.1,108.35;0706,109.6,107.7,108.25;0707,109.05,105.85,106.2;0708,106.6,105.05,106.05;0709,107,105.45,105.8;0713,107.55,105.7,106;0714,105.5,102.25,104.4;0715,106.45,104.65,106.3;0716,106.75,104.55,106.4;0717,103.05,100,100.15;0720,100.6,98.3,99.2;0721,102.5,99.85,102.5;0722,104.8,103.3,103.85;0723,104.8,102.9,103.9;0724,103.05,101.3,101.7;0727,101.6,100.05,101.45;0728,98.35,96.9,97.15;0729,97,91.8,93.7;0730,96,92,93.5;0731,102.85,99.8,102.85;0803,102.7,101,102;0804,102.25,99.75,100.65","2330":"0401,1855,1830,1855;0402,1865,1805,1810;0407,1860,1835,1860;0408,1950,1925,1950;0409,1955,1930,1955;0410,2000,1970,2000;0413,1995,1975,1990;0414,2055,2010,2055;0415,2100,2060,2080;0416,2090,2055,2085;0417,2060,2030,2030;0420,2055,2025,2025;0421,2075,2045,2050;0422,2070,2040,2050;0423,2135,2055,2080;0424,2190,2105,2185;0427,2330,2265,2265;0428,2280,2215,2215;0429,2210,2165,2180;0430,2215,2135,2135;0504,2285,2195,2275;0505,2270,2240,2250;0506,2285,2240,2250;0507,2345,2310,2310;0508,2310,2265,2290;0511,2275,2235,2235;0512,2280,2210,2255;0513,2240,2205,2220;0514,2270,2230,2270;0515,2325,2250,2265;0518,2260,2215,2240;0519,2230,2205,2205;0520,2210,2185,2185;0521,2255,2230,2230;0522,2260,2225,2255;0525,2310,2275,2310;0526,2325,2270,2270;0527,2330,2290,2300;0528,2360,2270,2295;0529,2375,2330,2355;0601,2415,2350,2355;0602,2400,2360,2380;0603,2440,2410,2425;0604,2415,2385,2385;0605,2405,2350,2365;0608,2320,2230,2295;0609,2320,2295,2305;0610,2300,2255,2255;0611,2260,2210,2250;0612,2325,2290,2310;0615,2375,2345,2375;0616,2400,2350,2400;0617,2385,2350,2385;0618,2415,2385,2410;0622,2510,2455,2510;0623,2535,2490,2490;0624,2445,2390,2390;0625,2420,2390,2390;0626,2370,2325,2340;0629,2395,2330,2370;0630,2475,2410,2410;0701,2505,2475,2505;0702,2480,2445,2465;0703,2465,2415,2445;0706,2500,2455,2460;0707,2500,2440,2440;0708,2465,2420,2465;0709,2460,2415,2415;0713,2480,2440,2440;0714,2430,2390,2420;0715,2460,2415,2440;0716,2470,2420,2470;0717,2395,2290,2290;0720,2345,2300,2320;0721,2410,2345,2410;0722,2445,2385,2400;0723,2405,2370,2405;0724,2365,2345,2350;0727,2365,2330,2350;0728,2305,2270,2280;0729,2280,2180,2200;0730,2260,2190,2205;0731,2425,2345,2425;0803,2395,2365,2370;0804,2360,2310,2320","00878":"0401,22.34,22.11,22.3;0402,22.48,21.96,22.03;0407,22.35,22.1,22.3;0408,22.92,22.64,22.92;0409,22.93,22.79,22.9;0410,23.05,22.9,23.02;0413,23.07,22.89,23.01;0414,23.31,23.15,23.2;0415,23.56,23.34,23.39;0416,23.87,23.71,23.8;0417,24.07,23.82,24.06;0420,24.58,24.38,24.51;0421,24.74,24.51,24.72;0422,25.13,24.76,25.1;0423,25.28,24.4,24.66;0424,25.02,24.69,25;0427,25.17,24.92,25;0428,25.43,25.02,25.3;0429,25.32,25.16,25.3;0430,25.68,25.31,25.39;0504,26.21,25.87,26.15;0505,26.62,26.25,26.58;0506,27.41,26.94,27.33;0507,27.9,27.44,27.89;0508,28.13,27.54,27.82;0511,28.29,27.72,28.28;0512,28.37,27.96,28.13;0513,28.04,27.68,27.95;0514,28.3,28,28.12;0515,28.56,27.76,27.9;0518,28,27.27,27.8;0519,27.69,27,27;0520,27.19,26.9,26.93;0521,27.76,27.42,27.71;0522,28.3,27.81,28.27;0525,29.5,28.83,29.48;0526,29.83,29.48,29.62;0527,30.8,30.28,30.55;0528,30.79,29.84,30;0529,30.8,30.35,30.76;0601,32.05,31.3,31.99;0602,32.5,31.81,32.49;0603,33.4,32.55,33.3;0604,32.96,32.54,32.68;0605,32.44,31.63,32.32;0608,31.17,30.02,31.11;0609,32.39,31.37,32.31;0610,32.1,31.5,31.6;0611,31.72,31.05,31.6;0612,32.46,32.05,32.05;0615,33.01,32.56,32.61;0616,32.98,32.65,32.91;0617,33.27,32.64,33.27;0618,33.71,33.45,33.67;0622,34.3,33.98,34.12;0623,34.62,33.98,33.98;0624,33.87,33.37,33.66;0625,34,33.49,33.75;0626,33.43,32.68,32.71;0629,33.2,32.72,32.9;0630,33.58,33.05,33.5;0701,33.83,33.23,33.32;0702,33.24,32.9,33.22;0703,33.38,32.88,33.33;0706,33.79,33.36,33.49;0707,33.6,32.91,32.97;0708,33.22,32.72,33.2;0709,33.39,32.99,33.19;0713,33.59,33,33.13;0714,33.03,32.08,32.72;0715,33.23,32.85,33.21;0716,33.05,32.66,32.95;0717,32.39,31.78,31.81;0720,31.97,31.1,31.36;0721,32.1,31.5,32.05;0722,32.98,32.57,32.72;0723,33.09,32.46,32.73;0724,32.84,32.42,32.61;0727,32.6,32.13,32.55;0728,32,31.5,31.5;0729,32.02,30.41,30.91;0730,31.17,30.3,30.75;0731,32.47,32,32.43;0803,32.76,32.11,32.57;0804,32.88,32.32,32.57","00919":"0401,22.55,22.35,22.5;0402,22.69,22.24,22.3;0407,22.64,22.4,22.62;0408,23,22.83,23;0409,23.01,22.81,22.86;0410,23,22.9,22.93;0413,22.85,22.7,22.81;0414,22.99,22.88,22.91;0415,23.04,22.94,22.97;0416,23.39,23.23,23.3;0417,23.44,23.29,23.43;0420,23.75,23.62,23.67;0421,23.72,23.53,23.64;0422,23.95,23.72,23.94;0423,24.01,23.3,23.45;0424,23.66,23.36,23.5;0427,23.5,23.29,23.33;0428,23.61,23.36,23.5;0429,23.76,23.59,23.65;0430,23.84,23.6,23.65;0504,24.07,23.8,23.96;0505,24.25,23.89,24.2;0506,24.96,24.61,24.91;0507,25.44,24.98,25.43;0508,25.72,25.31,25.47;0511,25.77,25.51,25.75;0512,25.88,25.33,25.73;0513,25.58,25.3,25.55;0514,25.94,25.62,25.89;0515,26.37,25.66,25.76;0518,25.74,25.25,25.64;0519,26.3,25.65,25.76;0520,26.15,25.85,25.98;0521,26.56,26.24,26.53;0522,26.74,26.53,26.73;0525,27.49,26.9,27.47;0526,28.03,27.75,27.93;0527,28.92,28.3,28.85;0528,29.16,28.34,28.41;0529,29.02,28.65,29.01;0601,30.1,29.33,30;0602,30.5,29.85,30.3;0603,30.8,30.32,30.78;0604,30.67,30.25,30.52;0605,30.7,29.95,30.67;0608,29.65,28.66,29.48;0609,30.84,29.71,30.72;0610,30.63,30.16,30.24;0611,30.33,29.81,30.19;0612,30.96,30.16,30.19;0615,30.9,30.56,30.69;0616,30.05,29.69,29.97;0617,30.52,29.84,30.35;0618,30.94,30.51,30.81;0622,31.04,30.65,30.8;0623,31.04,30.56,30.58;0624,30.5,30.05,30.21;0625,30.41,30.1,30.26;0626,30.06,29.55,29.56;0629,29.97,29.37,29.46;0630,29.73,29.29,29.5;0701,30.01,29.29,29.37;0702,29.37,29.15,29.2;0703,29.6,29.17,29.53;0706,30.02,29.68,29.76;0707,30.02,29.6,29.62;0708,30,29.62,29.94;0709,30.1,29.68,29.97;0713,30.17,29.64,29.71;0714,29.74,29.05,29.42;0715,29.85,29.52,29.77;0716,29.6,29.29,29.55;0717,29.35,28.9,28.93;0720,29.17,28.41,28.55;0721,29.03,28.69,29;0722,29.75,29.4,29.46;0723,29.85,29.29,29.5;0724,29.6,29.3,29.49;0727,29.6,29.38,29.59;0728,29.3,28.85,28.89;0729,29.39,28.02,28.5;0730,28.5,27.95,28.25;0731,29.63,29.2,29.57;0803,29.59,29.06,29.45;0804,29.67,29.26,29.51","0056":"0401,38.19,37.77,38.11;0402,38.52,37.7,37.82;0407,38.18,37.92,38.07;0408,39.12,38.71,39.02;0409,39.1,38.96,39.08;0410,39.57,39.29,39.41;0413,39.6,39.2,39.52;0414,40.13,39.86,39.97;0415,40.55,40.21,40.25;0416,40.88,40.53,40.8;0417,41.2,40.79,40.98;0420,41.58,41.31,41.47;0421,41.98,41.6,41.97;0422,42.61,41.97,42.61;0423,41.99,40.2,40.65;0424,41.04,40.64,40.95;0427,41.25,40.83,40.9;0428,41.33,40.97,41.11;0429,41.08,40.71,40.93;0430,41.3,40.81,40.9;0504,41.94,41.51,41.92;0505,42.68,42.15,42.62;0506,43.9,43.16,43.86;0507,44.77,44.01,44.72;0508,45.2,44.29,44.85;0511,45.79,44.85,45.76;0512,45.95,45.24,45.58;0513,45.26,44.73,45.15;0514,45.65,45.15,45.15;0515,45.68,44.37,44.45;0518,44.75,43.66,44.5;0519,45.1,44,44.01;0520,44.46,44,44.04;0521,45.52,44.74,45.44;0522,46.41,45.66,46.35;0525,48.41,47.51,48.35;0526,48.79,48.15,48.32;0527,49.87,49.1,49.64;0528,50.1,48.5,48.83;0529,50.25,49.5,50.2;0601,51.9,50.5,51.9;0602,52.8,51.45,52.8;0603,53.8,52.75,53.8;0604,53.3,52.5,52.65;0605,52.2,50.7,51.8;0608,49.45,47.64,49.45;0609,51.3,49.72,51.25;0610,51.05,49.59,49.62;0611,49.8,48.46,49.59;0612,51.65,50.5,50.6;0615,52,51.3,51.5;0616,51.9,51.4,51.55;0617,51.95,50.85,51.95;0618,52.85,52.4,52.8;0622,54.15,53.5,54.05;0623,54.9,53.6,53.6;0624,53.4,52.5,53.15;0625,53.8,52.95,53.2;0626,52.95,51.35,51.45;0629,52.35,51.6,51.8;0630,53.25,52.15,53.25;0701,53.55,52.55,52.75;0702,52.65,51.75,52.6;0703,52.95,52.1,52.85;0706,53.95,53.1,53.25;0707,53.6,51.95,52.15;0708,52.65,51.65,52.35;0709,53.05,52.3,52.65;0713,53.45,52.15,52.4;0714,52.35,50.5,51.75;0715,53.05,52.35,53;0716,52.9,52.2,52.65;0717,51.45,50.4,50.75;0720,50.85,49.07,49.95;0721,49.7,48.71,49.55;0722,51.2,50.1,50.95;0723,51.55,50.35,50.65;0724,50.85,50.05,50.2;0727,50.25,49.32,50;0728,49.26,48.14,48.19;0729,48.67,45.98,46.73;0730,47.58,45.84,46.29;0731,49.79,48.7,49.48;0803,50.1,48.85,49.82;0804,51,49.63,50.6","00981A":"0401,20.67,20.26,20.66;0402,21.09,20.16,20.22;0407,20.96,20.56,20.74;0408,22.23,21.79,22.2;0409,22.79,22.26,22.58;0410,23.18,22.76,23.13;0413,23.23,22.96,23.03;0414,23.89,23.45,23.62;0415,24.51,24.01,24.3;0416,25.07,24.5,25.07;0417,25.54,24.98,25.1;0420,26.58,25.26,25.98;0421,26.76,26.01,26.4;0422,27.15,26.5,26.95;0423,28.06,26.02,26.62;0424,27.85,27.1,27.8;0427,28.77,27.58,27.9;0428,28.2,27.64,27.81;0429,27.91,27.25,27.74;0430,28.43,27.9,28.28;0504,29.64,28.86,29.63;0505,29.84,29.29,29.46;0506,30,28.58,29.3;0507,29.67,29.35,29.58;0508,29.47,28.43,28.91;0511,29.73,28.89,29.69;0512,30.43,29.83,29.97;0513,29.55,29.01,29.28;0514,30.03,29.35,29.44;0515,29.85,28.33,28.42;0518,28.24,27.4,28.24;0519,28.38,27.46,27.49;0520,27.72,27.1,27.23;0521,28.86,28.3,28.86;0522,29.99,29.47,29.95;0525,31.75,30.93,31.61;0526,31.89,31.1,31.49;0527,32.73,31.67,31.96;0528,32.23,30.5,30.72;0529,31.72,31.27,31.54;0601,32.07,31.61,31.7;0602,31.81,30.7,31.33;0603,32.1,31.65,31.81;0604,31.62,31.06,31.36;0605,31.25,29.75,30.81;0608,29.9,28.11,29.89;0609,31.23,30.02,31.23;0610,31.4,29.87,29.89;0611,30.3,28.61,29.71;0612,31.4,30.31,30.6;0615,31.81,31.32,31.47;0616,31.28,30.78,30.82;0617,30.93,30.46,30.88;0618,31.5,31.13,31.5;0622,32.4,32,32.23;0623,32.5,31.5,31.6;0624,31.6,30.7,31.48;0625,31.83,31.23,31.5;0626,31.34,29.89,29.91;0629,30.41,29.61,29.94;0630,31.3,30.51,31.28;0701,32.23,31.55,32;0702,32.13,31.12,32.05;0703,32.33,31.2,32.26;0706,32.45,31.08,31.2;0707,31.3,29.75,29.84;0708,30.1,29.25,29.75;0709,30.54,29.78,29.95;0713,30.55,29.21,29.35;0714,29.3,27.34,28.4;0715,29.46,28.51,29.38;0716,29.2,28.5,28.95;0717,27.8,26.43,26.43;0720,26.6,25.27,25.9;0721,27.72,26.32,27.72;0722,28.88,28.35,28.5;0723,29.12,28.46,28.69;0724,28.59,27.53,27.54;0727,27.62,26.75,27.53;0728,26.38,25.45,25.45;0729,25.58,23.2,23.85;0730,25.18,23.26,23.76;0731,26.13,25.86,26.13;0803,27.49,26.12,27.11;0804,27.85,26.91,27.58"};
+function parse(s){return s.split(";").map(function(r){var p=r.split(",");return{d:p[0],h:+p[1],l:+p[2],c:+p[3]};});}
+function ema(v,n){var out=[],e=null,k=2/(n+1);
+for(var i=0;i<v.length;i++){if(i<n-1){out.push(null);continue;}
+if(e===null){var s=0;for(var j=0;j<n;j++)s+=v[j];e=s/n;}else{e=v[i]*k+e*(1-k);}out.push(e);}return out;}
+function rsi(c,n){var out=new Array(c.length).fill(null),g=[],l=[];
+for(var i=1;i<c.length;i++){var ch=c[i]-c[i-1];g.push(Math.max(ch,0));l.push(Math.max(-ch,0));}
+if(g.length<n)return out;var ag=0,al=0;for(var j=0;j<n;j++){ag+=g[j];al+=l[j];}ag/=n;al/=n;
+var f=function(a,b){return b===0?100:100-100/(1+a/b);};out[n]=f(ag,al);
+for(var i=n;i<g.length;i++){ag=(ag*(n-1)+g[i])/n;al=(al*(n-1)+l[i])/n;out[i+1]=f(ag,al);}return out;}
+function macd(c){var a=ema(c,12),b=ema(c,26),dif=a.map(function(x,i){return(x!==null&&b[i]!==null)?x-b[i]:null;});
+var dv=dif.filter(function(x){return x!==null;}),st=dif.length-dv.length,dp=ema(dv,9);
+var dea=new Array(st).fill(null).concat(dp);
+var osc=dif.map(function(x,i){return(x!==null&&dea[i]!==null)?x-dea[i]:null;});
+return{dif:dif,dea:dea,osc:osc};}
+function hl20(rows){var h=[],l=[];for(var i=0;i<rows.length;i++){if(i<20){h.push(null);l.push(null);continue;}
+var mx=-1e18,mn=1e18;for(var j=i-20;j<i;j++){if(rows[j].h>mx)mx=rows[j].h;if(rows[j].l<mn)mn=rows[j].l;}h.push(mx);l.push(mn);}return{h:h,l:l};}
+var W=760,PL=52,PR=14,PT=14,PB=26;
+function X(i,n){return PL+(W-PL-PR)*i/Math.max(n-1,1);}
+function Y(v,lo,hi,t,b){if(hi===lo)hi=lo+1;return b-(v-lo)/(hi-lo)*(b-t);}
+function pth(v,n,lo,hi,t,b){var d="",on=false;
+for(var i=0;i<v.length;i++){if(v[i]===null){on=false;continue;}
+d+=(on?"L":"M")+X(i,n).toFixed(1)+","+Y(v[i],lo,hi,t,b).toFixed(1)+" ";on=true;}return d;}
+function grid(lo,hi,t,b,dp){var s="";for(var k=0;k<5;k++){var v=lo+(hi-lo)*k/4,y=Y(v,lo,hi,t,b);
+s+='<line class="g" x1="'+PL+'" y1="'+y.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+y.toFixed(1)+'"/>';
+s+='<text class="ax" text-anchor="end" x="'+(PL-6)+'" y="'+(y+4).toFixed(1)+'">'+v.toFixed(dp)+'</text>';}return s;}
+function xlab(ds,n,y){var s="",st=Math.max(Math.floor(n/8),1);
+for(var i=0;i<n;i+=st){s+='<text class="ax" text-anchor="middle" x="'+X(i,n).toFixed(1)+'" y="'+y+'">'+ds[i].slice(0,2)+"/"+ds[i].slice(2)+'</text>';}return s;}
+function rng(arrs){var lo=1e18,hi=-1e18;arrs.forEach(function(a){a.forEach(function(v){if(v===null)return;if(v<lo)lo=v;if(v>hi)hi=v;});});
+var p=(hi-lo)*0.07;return[lo-p,hi+p];}
+document.querySelectorAll("section.card").forEach(function(sec){
+var code=sec.dataset.code,rows=parse(RAW[code]),n=rows.length;
+var c=rows.map(function(r){return r.c;}),ds=rows.map(function(r){return r.d;});
+var e20=ema(c,20),e60=ema(c,60),r14=rsi(c,14),m=macd(c),hl=hl20(rows);
+var H=240,t=PT,b=H-PB,rr=rng([c,e20,e60,hl.h,hl.l]);
+var s='<svg viewBox="0 0 '+W+' '+H+'">'+grid(rr[0],rr[1],t,b,1);
+s+='<path class="l hi" d="'+pth(hl.h,n,rr[0],rr[1],t,b)+'"/>';
+s+='<path class="l lo" d="'+pth(hl.l,n,rr[0],rr[1],t,b)+'"/>';
+s+='<path class="l e60" d="'+pth(e60,n,rr[0],rr[1],t,b)+'"/>';
+s+='<path class="l e20" d="'+pth(e20,n,rr[0],rr[1],t,b)+'"/>';
+s+='<path class="l px" d="'+pth(c,n,rr[0],rr[1],t,b)+'"/>'+xlab(ds,n,H-8)+'</svg>';
+sec.querySelector('[data-k=price]').innerHTML=s;
+var H2=170,b2=H2-PB,s2='<svg viewBox="0 0 '+W+' '+H2+'">';
+[[70,"r70"],[50,"r50"],[30,"r30"]].forEach(function(x){var y=Y(x[0],0,100,t,b2);
+s2+='<line class="'+x[1]+'" x1="'+PL+'" y1="'+y.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+y.toFixed(1)+'"/>';
+s2+='<text class="ax" text-anchor="end" x="'+(PL-6)+'" y="'+(y+4).toFixed(1)+'">'+x[0]+'</text>';});
+s2+='<path class="l rsi" d="'+pth(r14,n,0,100,t,b2)+'"/>'+xlab(ds,n,H2-8)+'</svg>';
+sec.querySelector('[data-k=rsi]').innerHTML=s2;
+var H3=180,b3=H3-PB,r3=rng([m.dif,m.dea,m.osc]),y0=Y(0,r3[0],r3[1],t,b3);
+var s3='<svg viewBox="0 0 '+W+' '+H3+'">'+grid(r3[0],r3[1],t,b3,2);
+s3+='<line class="zero" x1="'+PL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+y0.toFixed(1)+'"/>';
+var bw=Math.max((W-PL-PR)/n*0.62,1);
+m.osc.forEach(function(v,i){if(v===null)return;var x=X(i,n),y=Y(v,r3[0],r3[1],t,b3);
+s3+='<rect class="'+(v>=0?"bu":"bdn")+'" x="'+(x-bw/2).toFixed(1)+'" y="'+Math.min(y,y0).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(Math.abs(y-y0),0.6).toFixed(1)+'"/>';});
+s3+='<path class="l dea" d="'+pth(m.dea,n,r3[0],r3[1],t,b3)+'"/>';
+s3+='<path class="l dif" d="'+pth(m.dif,n,r3[0],r3[1],t,b3)+'"/>'+xlab(ds,n,H3-8)+'</svg>';
+sec.querySelector('[data-k=macd]').innerHTML=s3;
+});
+</script>
+<script>
+
+const $ = (id) => document.getElementById(id);
+
+function getSettings() {
+  return {
+    url: localStorage.getItem('sp_supabase_url') || '',
+    key: localStorage.getItem('sp_supabase_key') || '',
+  };
+}
+function saveSettings(url, key) {
+  localStorage.setItem('sp_supabase_url', url);
+  localStorage.setItem('sp_supabase_key', key);
+}
+
+let supabaseClient = null;
+let currentStockId = null;
+let currentPeBands = null;   // {p10,p25,p50,p75,p90}，計算器要用
+
+function fmt(n, digits = 2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '--';
+  return Number(n).toLocaleString('zh-TW', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+}
+function fmtPct(n, digits = 1) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '--';
+  return (n > 0 ? '+' : '') + Number(n).toFixed(digits) + '%';
+}
+
+async function initApp() {
+  const { url, key } = getSettings();
+  if (!url || !key) {
+    $('settings-panel').classList.add('show');
+    $('loading').style.display = 'none';
+    return;
+  }
+  $('input-url').value = url;
+  $('input-key').value = key;
+  supabaseClient = window.supabase.createClient(url, key);
+
+  try {
+    await loadStockList();
+    await loadDashboard(currentStockId);
+  } catch (e) {
+    showError(e);
+  }
+}
+
+function showError(e) {
+  $('loading').style.display = 'none';
+  $('content').style.display = 'none';
+  $('error').style.display = 'block';
+  $('error').textContent = '載入失敗：' + (e.message || e) + '（請確認Supabase URL/anon key是否正確，以及是否已執行dashboard_rls_policies.sql開放讀取權限）';
+}
+
+async function loadStockList() {
+  const { data, error } = await supabaseClient.from('stocks').select('*').eq('is_active', true).order('stock_id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('stocks表目前是空的，main.py至少要成功執行過一次');
+
+  const sel = $('stock-select');
+  sel.innerHTML = '';
+  data.forEach((s) => {
+    const opt = document.createElement('option');
+    opt.value = s.stock_id;
+    opt.textContent = `${s.stock_name} (${s.stock_id})`;
+    sel.appendChild(opt);
+  });
+  currentStockId = data[0].stock_id;
+  sel.value = currentStockId;
+  sel.onchange = () => loadDashboard(sel.value);
+}
+
+async function loadDashboard(stockId) {
+  currentStockId = stockId;
+  $('loading').style.display = 'block';
+  $('content').style.display = 'none';
+  $('error').style.display = 'none';
+
+  const [priceRes, valRes, chipRes, revRes, finRes, estRes, valHistRes, finHistRes, fcfRes] = await Promise.all([
+    supabaseClient.from('daily_price').select('*').eq('stock_id', stockId).order('trade_date', { ascending: false }).limit(2),
+    supabaseClient.from('valuation').select('*').eq('stock_id', stockId).order('trade_date', { ascending: false }).limit(1),
+    supabaseClient.from('chip_flow').select('*').eq('stock_id', stockId).order('trade_date', { ascending: false }).limit(5),
+    supabaseClient.from('monthly_revenue').select('*').eq('stock_id', stockId).order('revenue_month', { ascending: false }).limit(1),
+    supabaseClient.from('quarterly_financials').select('*').eq('stock_id', stockId).order('fiscal_quarter', { ascending: false }).limit(1),
+    supabaseClient.from('analyst_estimates').select('*').eq('stock_id', stockId).order('report_date', { ascending: false }),
+    // 以下三個是「評價模型」新增的查詢：
+    supabaseClient.from('valuation').select('pe_ratio,pb_ratio,trade_date').eq('stock_id', stockId).order('trade_date', { ascending: false }).limit(1500),
+    supabaseClient.from('quarterly_financials').select('*').eq('stock_id', stockId).order('fiscal_quarter', { ascending: false }).limit(8),
+    supabaseClient.from('cash_flow_statement').select('*').eq('stock_id', stockId).order('fiscal_quarter', { ascending: false }).limit(1),
+  ]);
+
+  for (const r of [priceRes, valRes, chipRes, revRes, finRes, estRes, valHistRes, finHistRes, fcfRes]) {
+    if (r.error) throw r.error;
+  }
+
+  renderPrice(priceRes.data);
+  renderMetrics(priceRes.data, valRes.data);
+  renderDims(priceRes.data, chipRes.data, valRes.data, revRes.data, finRes.data);
+  renderValuationModel(valHistRes.data, finHistRes.data, fcfRes.data, valRes.data[0], priceRes.data[0]);
+  renderEstimates(estRes.data);
+  renderFooter();
+
+  $('loading').style.display = 'none';
+  $('content').style.display = 'block';
+  $('last-updated').textContent = '網頁載入時間：' + new Date().toLocaleString('zh-TW');
+}
+
+function renderPrice(priceRows) {
+  const latest = priceRows[0];
+  const prev = priceRows[1];
+  if (!latest) {
+    $('price-value').textContent = '無資料';
+    $('price-change').textContent = '';
+    $('price-date').textContent = '';
+    return;
+  }
+  $('price-value').textContent = fmt(latest.close);
+  $('price-date').textContent = latest.trade_date;
+  if (prev) {
+    const diff = latest.close - prev.close;
+    const pct = (diff / prev.close) * 100;
+    const cls = diff >= 0 ? 'up' : 'down';
+    $('price-change').className = 'change ' + cls;
+    $('price-change').textContent = `${diff >= 0 ? '+' : ''}${fmt(diff)} (${fmtPct(pct)})`;
+  } else {
+    $('price-change').textContent = '';
+  }
+}
+
+function renderMetrics(priceRows, valRows) {
+  const latest = priceRows[0] || {};
+  const val = valRows[0] || {};
+  const metrics = [
+    { label: '本益比 PE', value: fmt(val.pe_ratio, 1) + 'x' },
+    { label: '殖利率', value: fmt(val.dividend_yield_pct, 2) + '%' },
+    { label: '股價淨值比 PB', value: fmt(val.pb_ratio, 2) + 'x' },
+    { label: 'RSI(14)', value: fmt(latest.rsi14, 1) },
+  ];
+  $('metrics').innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="label">${m.label}</div>
+      <div class="value">${m.value}</div>
+    </div>
+  `).join('');
+}
+
+function technicalBadge(latest) {
+  if (!latest || latest.ma5 == null || latest.ma20 == null || latest.ma60 == null) {
+    return { text: '資料不足', cls: 'neutral' };
+  }
+  if (latest.close > latest.ma5 && latest.ma5 > latest.ma20 && latest.ma20 > latest.ma60) {
+    return { text: '多頭排列', cls: 'success' };
+  }
+  if (latest.close < latest.ma20 && latest.ma20 < latest.ma60) {
+    return { text: '空頭排列', cls: 'danger' };
+  }
+  return { text: '盤整/待確認', cls: 'warning' };
+}
+
+function chipBadge(chipRows) {
+  if (!chipRows || chipRows.length === 0) return { text: '無資料', cls: 'neutral' };
+  const sum = chipRows.reduce((s, r) => s + (r.foreign_net_buy || 0), 0);
+  if (sum > 0) return { text: `外資近${chipRows.length}日買超`, cls: 'success' };
+  if (sum < 0) return { text: `外資近${chipRows.length}日賣超`, cls: 'danger' };
+  return { text: '外資買賣平衡', cls: 'neutral' };
+}
+
+function renderDims(priceRows, chipRows, valRows, revRows, finRows) {
+  const latest = priceRows[0] || {};
+  const rev = revRows[0] || {};
+  const fin = finRows[0] || {};
+
+  const techBadge = technicalBadge(latest);
+  const chipB = chipBadge(chipRows);
+
+  const techHtml = `
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-title">技術面</div>
+        <span class="badge ${techBadge.cls}">${techBadge.text}</span>
+      </div>
+      <div class="kv">
+        <div><span>MA5</span><span>${fmt(latest.ma5)}</span></div>
+        <div><span>MA20</span><span>${fmt(latest.ma20)}</span></div>
+        <div><span>MA60</span><span>${fmt(latest.ma60)}</span></div>
+        <div><span>RSI14</span><span>${fmt(latest.rsi14, 1)}</span></div>
+        <div><span>K</span><span>${fmt(latest.kd_k, 1)}</span></div>
+        <div><span>D</span><span>${fmt(latest.kd_d, 1)}</span></div>
+        <div><span>MACD DIF</span><span>${fmt(latest.macd_dif)}</span></div>
+        <div><span>MACD柱狀</span><span>${fmt(latest.macd_hist)}</span></div>
+      </div>
+    </div>`;
+
+  const chipRowsHtml = chipRows.map(r => `
+    <tr>
+      <td>${r.trade_date}</td>
+      <td>${fmt(r.foreign_net_buy, 0)}</td>
+      <td>${fmt(r.trust_net_buy, 0)}</td>
+      <td>${fmt(r.dealer_net_buy, 0)}</td>
+    </tr>`).join('');
+
+  const chipHtml = `
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-title">籌碼面</div>
+        <span class="badge ${chipB.cls}">${chipB.text}</span>
+      </div>
+      <table>
+        <thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營</th></tr></thead>
+        <tbody>${chipRowsHtml || '<tr><td colspan="4">無資料</td></tr>'}</tbody>
+      </table>
+    </div>`;
+
+  const fundHtml = `
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-title">基本面</div>
+        <span class="badge neutral">${fin.fiscal_quarter || rev.revenue_month || '--'}</span>
+      </div>
+      <div class="kv">
+        <div><span>最近月營收</span><span>${rev.revenue_ntd ? fmt(rev.revenue_ntd / 1e8, 1) + '億' : '--'}</span></div>
+        <div><span>營收年增率</span><span>${fmtPct(rev.yoy_pct)}</span></div>
+        <div><span>最近季EPS</span><span>${fmt(fin.eps, 2)}</span></div>
+        <div><span>毛利率</span><span>${fmt(fin.gross_margin_pct, 1)}%</span></div>
+        <div><span>營業利益率</span><span>${fmt(fin.operating_margin_pct, 1)}%</span></div>
+        <div><span>單季淨利</span><span>${fin.net_income ? fmt(fin.net_income / 1e8, 1) + '億' : '--'}</span></div>
+      </div>
+    </div>`;
+
+  const valHtml = `
+    <div class="dim-card">
+      <div class="dim-header">
+        <div class="dim-title">估值面</div>
+        <span class="badge neutral">${(valRows[0] && valRows[0].trade_date) || '--'}</span>
+      </div>
+      <div class="kv">
+        <div><span>本益比 PE</span><span>${fmt(valRows[0] && valRows[0].pe_ratio, 1)}x</span></div>
+        <div><span>殖利率</span><span>${fmt(valRows[0] && valRows[0].dividend_yield_pct, 2)}%</span></div>
+        <div><span>股價淨值比</span><span>${fmt(valRows[0] && valRows[0].pb_ratio, 2)}x</span></div>
+      </div>
+    </div>`;
+
+  $('dims').innerHTML = techHtml + chipHtml + fundHtml + valHtml;
+}
+
+// ---- 模組化評價模型 ----
+
+function percentile(sortedAsc, p) {
+  if (!sortedAsc || sortedAsc.length === 0) return null;
+  const idx = (p / 100) * (sortedAsc.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedAsc[lower];
+  const weight = idx - lower;
+  return sortedAsc[lower] * (1 - weight) + sortedAsc[upper] * weight;
+}
+
+function computeEpsYoyGrowth(finRowsDesc) {
+  // finRowsDesc: 依fiscal_quarter新到舊排序的季報陣列
+  if (!finRowsDesc || finRowsDesc.length < 2) return null;
+  const latest = finRowsDesc[0];
+  if (!latest || latest.eps == null || !latest.fiscal_quarter) return null;
+  const qLabel = latest.fiscal_quarter.slice(4);            // 'Q1'..'Q4'
+  const yearNum = parseInt(latest.fiscal_quarter.slice(0, 4), 10);
+  const lastYearQ = (yearNum - 1) + qLabel;                 // 去年同季
+  const match = finRowsDesc.find(r => r.fiscal_quarter === lastYearQ);
+  if (!match || match.eps == null || match.eps === 0) return null;
+  return (latest.eps - match.eps) / Math.abs(match.eps) * 100;
+}
+
+function pegBadge(peg) {
+  if (peg == null) return { text: '無法計算', cls: 'neutral' };
+  if (peg < 1) return { text: `PEG ${peg.toFixed(2)} 可能低估`, cls: 'success' };
+  if (peg <= 2) return { text: `PEG ${peg.toFixed(2)} 合理`, cls: 'warning' };
+  return { text: `PEG ${peg.toFixed(2)} 偏貴`, cls: 'danger' };
+}
+
+function renderValuationModel(peHistRows, finHistRows, fcfRows, latestVal, latestPrice) {
+  const peValues = (peHistRows || []).map(r => r.pe_ratio).filter(v => v != null && v > 0).sort((a, b) => a - b);
+  const pbValues = (peHistRows || []).map(r => r.pb_ratio).filter(v => v != null && v > 0).sort((a, b) => a - b);
+
+  const enoughHistory = peValues.length >= 20;
+  const peBands = enoughHistory ? {
+    p10: percentile(peValues, 10), p25: percentile(peValues, 25), p50: percentile(peValues, 50),
+    p75: percentile(peValues, 75), p90: percentile(peValues, 90),
+  } : null;
+  currentPeBands = peBands;
+
+  const pbBands = pbValues.length >= 20 ? {
+    p25: percentile(pbValues, 25), p50: percentile(pbValues, 50), p75: percentile(pbValues, 75),
+  } : null;
+
+  const currentPe = latestVal ? latestVal.pe_ratio : null;
+  let peRank = null;
+  if (enoughHistory && currentPe != null) {
+    const below = peValues.filter(v => v <= currentPe).length;
+    peRank = (below / peValues.length) * 100;
+  }
+
+  const epsGrowth = computeEpsYoyGrowth(finHistRows);
+  const peg = (currentPe != null && epsGrowth != null && epsGrowth > 0) ? currentPe / epsGrowth : null;
+  const pegB = pegBadge(peg);
+
+  const fcf = fcfRows && fcfRows[0] ? fcfRows[0] : null;
+
+  const overallCls = peRank == null ? 'neutral' : (peRank <= 25 ? 'success' : peRank >= 75 ? 'danger' : 'warning');
+  const overallText = peRank == null ? '歷史資料不足(需≥20筆PE)' : `PE位階 ${peRank.toFixed(0)}%`;
+  $('valmodel-badge').className = 'badge ' + overallCls;
+  $('valmodel-badge').textContent = overallText;
+
+  const kvHtml = `
+    <div><span>PE歷史百分位(位階)</span><span>${peRank != null ? peRank.toFixed(0) + '%' : '資料不足'}</span></div>
+    <div><span>PE便宜區(10%)</span><span>${peBands ? fmt(peBands.p10, 1) + 'x' : '--'}</span></div>
+    <div><span>PE合理中位(50%)</span><span>${peBands ? fmt(peBands.p50, 1) + 'x' : '--'}</span></div>
+    <div><span>PE偏貴區(90%)</span><span>${peBands ? fmt(peBands.p90, 1) + 'x' : '--'}</span></div>
+    <div><span>PB合理中位(50%)</span><span>${pbBands ? fmt(pbBands.p50, 2) + 'x' : '--'}</span></div>
+    <div><span>EPS年增率(YoY)</span><span>${fmtPct(epsGrowth)}</span></div>
+    <div><span>PEG</span><span class="badge ${pegB.cls}" style="font-size:11px;">${pegB.text}</span></div>
+    <div><span>最近季FCF</span><span>${fcf && fcf.free_cash_flow != null ? fmt(fcf.free_cash_flow / 1e8, 1) + '億(' + fcf.fiscal_quarter + ')' : '無資料'}</span></div>
+  `;
+  $('valmodel-kv').innerHTML = kvHtml;
+
+  // 計算器按鈕重新綁定（帶入這次load的最新資料）
+  $('calc-btn').onclick = () => runValuationCalc(latestPrice);
+}
+
+function runValuationCalc(latestPrice) {
+  const epsInput = parseFloat($('forecast-eps-input').value);
+  const resultEl = $('valmodel-calc-result');
+  if (Number.isNaN(epsInput) || epsInput <= 0) {
+    resultEl.innerHTML = '<div style="color:var(--red); font-size:13px;">請輸入一個大於0的預估EPS數字</div>';
+    return;
+  }
+  if (!currentPeBands) {
+    resultEl.innerHTML = '<div style="color:var(--text-secondary); font-size:13px;">這檔股票歷史PE資料不足(需先執行backfill_valuation_history.py回補至少約1個月以上、建議數年的歷史資料)，無法計算百分位區間目標價。</div>';
+    return;
+  }
+  const price = latestPrice ? latestPrice.close : null;
+  const bands = currentPeBands;
+  const rows = [
+    { label: '便宜區(PE 10%)', pe: bands.p10 },
+    { label: '中低(PE 25%)', pe: bands.p25 },
+    { label: '合理中位(PE 50%)', pe: bands.p50 },
+    { label: '中高(PE 75%)', pe: bands.p75 },
+    { label: '偏貴區(PE 90%)', pe: bands.p90 },
+  ];
+
+  let verdict = { text: '--', cls: 'neutral' };
+  if (price != null) {
+    const cheapTarget = epsInput * bands.p25;
+    const expensiveTarget = epsInput * bands.p75;
+    if (price <= cheapTarget) verdict = { text: '低於合理區間下緣，可能是買點', cls: 'success' };
+    else if (price >= expensiveTarget) verdict = { text: '高於合理區間上緣，偏貴、建議觀望', cls: 'danger' };
+    else verdict = { text: '落在合理區間內', cls: 'warning' };
+  }
+
+  const tableHtml = rows.map(r => `
+    <tr>
+      <td>${r.label}</td>
+      <td>${fmt(r.pe, 1)}x</td>
+      <td>${fmt(epsInput * r.pe, 0)}</td>
+    </tr>`).join('');
+
+  resultEl.innerHTML = `
+    <table>
+      <thead><tr><th>區間</th><th>對應PE</th><th>目標價</th></tr></thead>
+      <tbody>${tableHtml}</tbody>
+    </table>
+    <div style="margin-top:10px; display:flex; align-items:center; gap:8px; font-size:13px;">
+      <span>目前股價 ${price != null ? fmt(price) : '--'} →</span>
+      <span class="badge ${verdict.cls}">${verdict.text}</span>
+    </div>
+    <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
+      這是用你輸入的預估EPS×歷史PE百分位反推的目標價，預估EPS是否準確要靠你自己判斷，本工具不做EPS預測。
+    </div>
+  `;
+}
+
+function renderEstimates(rows) {
+  if (!rows || rows.length === 0) {
+    $('estimate-count-badge').textContent = '尚無資料';
+    $('estimates-body').innerHTML = '<div class="kv" style="margin-top:8px;">目前analyst_estimates表是空的，請照README第四項步驟在Supabase Table Editor手動新增分析師目標價。</div>';
+    return;
+  }
+  const targets = rows.map(r => r.target_price).filter(v => v != null);
+  const avg = targets.length ? targets.reduce((a, b) => a + b, 0) / targets.length : null;
+  const sorted = [...targets].sort((a, b) => a - b);
+  const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : null;
+
+  $('estimate-count-badge').textContent = `${rows.length}家 · 平均${fmt(avg, 0)} · 中位數${fmt(median, 0)}`;
+
+  const rowsHtml = rows.map(r => `
+    <tr>
+      <td>${r.institution || '--'}</td>
+      <td>${fmt(r.target_price, 0)}</td>
+      <td>${r.eps_estimate_year || '--'}</td>
+      <td>${fmt(r.eps_estimate, 2)}</td>
+      <td>${r.rating || '--'}</td>
+      <td>${r.report_date || '--'}</td>
+    </tr>`).join('');
+
+  $('estimates-body').innerHTML = `
+    <table>
+      <thead><tr><th>投行</th><th>目標價</th><th>預估年度</th><th>EPS預估</th><th>評等</th><th>報告日期</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+}
+
+function renderFooter() {
+  $('footer-note').innerHTML = `
+    資料來源：股價/技術面/月營收/季報/估值面/籌碼面(三大法人買賣超、融資融券)/現金流量表由Python腳本每日盤後透過FinMind API自動更新；
+    分析師目標價/EPS預估為手動維護，非即時、也非自動抓取。<br>
+    模組化評價模型的PE/PB百分位需要歷史資料才準確，第一次使用請先在自己電腦執行過
+    <code>backfill_valuation_history.py</code> 回補歷史資料，否則會顯示「歷史資料不足」。<br>
+    本頁面僅供個人研究參考，不構成投資建議，所有數字請自行與官方公告核對後再做決策。
+  `;
+}
+
+$('settings-btn').onclick = () => $('settings-panel').classList.toggle('show');
+$('refresh-btn').onclick = () => { if (currentStockId) loadDashboard(currentStockId); };
+$('save-settings-btn').onclick = () => {
+  const url = $('input-url').value.trim();
+  const key = $('input-key').value.trim();
+  if (!url || !key) { alert('請把URL和anon key都填上'); return; }
+  saveSettings(url, key);
+  $('settings-panel').classList.remove('show');
+  supabaseClient = window.supabase.createClient(url, key);
+  loadStockList().then(() => loadDashboard(currentStockId)).catch(showError);
+};
+
+initApp();
+
+</script>
+<script>
+
+(function(){
+  var btns=document.querySelectorAll(".navbtn");
+  var views={"multi":document.getElementById("app-multi"),"live":document.getElementById("app-live")};
+  function activate(key){
+    btns.forEach(function(b){b.classList.toggle("active", b.dataset.view===key);});
+    Object.keys(views).forEach(function(k){views[k].classList.toggle("active", k===key);});
+    try{localStorage.setItem("sp_active_view", key);}catch(e){}
+  }
+  btns.forEach(function(b){b.addEventListener("click", function(){activate(b.dataset.view);});});
+  var saved = null;
+  try{saved = localStorage.getItem("sp_active_view");}catch(e){}
+  activate(saved==="live" ? "live" : "multi");
+})();
+
+</script>
+</body></html>
