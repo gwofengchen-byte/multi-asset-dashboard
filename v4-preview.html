@@ -33,16 +33,18 @@
   #loading,#error{max-width:600px;margin:60px auto;text-align:center;color:var(--sub);font-size:14px;}
   #error{color:var(--up);}
 
-  .layout{display:none;align-items:flex-start;max-width:1200px;margin:0 auto;}
-  .layout.show{display:flex;}
-  .sidebar{width:190px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);padding:16px 10px;position:sticky;top:0;align-self:stretch;}
-  .side-btn{display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:3px;border:none;background:none;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--sub);cursor:pointer;}
-  .side-btn:hover{background:#f2f4f7;}
-  .side-btn.active{background:#eaf0ff;color:var(--accent);}
-  .group-label{font-size:11px;color:var(--sub);padding:14px 12px 4px;font-weight:700;letter-spacing:.3px;}
-  .side-note{font-size:11px;color:#b0b4bb;padding:16px 12px 0;line-height:1.6;border-top:1px solid var(--border);margin-top:10px;}
+  .layout{display:none;max-width:1200px;margin:0 auto;}
+  .layout.show{display:block;}
+  .topnav-wrap{display:flex;align-items:center;gap:8px;background:var(--card);border-bottom:1px solid var(--border);padding:6px 12px;position:sticky;top:0;z-index:20;}
+  .topnav{display:flex;align-items:center;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;flex:1;min-width:0;}
+  .topnav::-webkit-scrollbar{height:4px;}
+  .tab-btn{flex-shrink:0;padding:9px 13px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap;}
+  .tab-btn:hover{background:#f2f4f7;}
+  .tab-btn.active{background:#eaf0ff;color:var(--accent);}
+  .nav-divider{flex-shrink:0;font-size:10.5px;color:#b0b4bb;padding:0 2px 0 8px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
+  .settings-link-top{flex-shrink:0;font-size:11.5px;color:var(--accent);text-decoration:none;padding:6px 8px;white-space:nowrap;}
 
-  .content{flex:1;min-width:0;padding:20px 24px 60px;}
+  .content{padding:20px 24px 60px;}
   .alloc-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px;}
   .alloc-bar h3{margin:0 0 10px;font-size:14px;color:var(--sub);font-weight:600;}
   .alloc-bar .alloc-editnote{font-size:11.5px;color:var(--sub);margin-top:8px;}
@@ -148,16 +150,18 @@
 <div id="error" style="display:none;"></div>
 
 <div class="layout" id="layout">
-  <div class="sidebar">
-    <button class="side-btn active" data-tab="t0">📋 總覽</button>
-    <div class="group-label">核心部位</div>
-    <button class="side-btn" data-tab="t1">① 指數型ETF</button>
-    <button class="side-btn" data-tab="t2">② 高股息ETF</button>
-    <button class="side-btn" data-tab="t3">③ 金融股</button>
-    <div class="group-label">衛星持股</div>
-    <button class="side-btn" data-tab="t4">① 個股型</button>
-    <button class="side-btn" data-tab="t5">② 海外ETF型</button>
-    <div class="side-note">核心／衛星分組沿用你原本網頁的左側導覽習慣。<br><br><a href="#" id="settings-link" style="color:var(--accent);">重新設定 Supabase 連線</a></div>
+  <div class="topnav-wrap">
+    <div class="topnav">
+      <button class="tab-btn active" data-tab="t0">📋 總覽</button>
+      <span class="nav-divider">核心</span>
+      <button class="tab-btn" data-tab="t1">①指數型ETF</button>
+      <button class="tab-btn" data-tab="t2">②高股息ETF</button>
+      <button class="tab-btn" data-tab="t3">③金融股</button>
+      <span class="nav-divider">衛星</span>
+      <button class="tab-btn" data-tab="t4">①個股型</button>
+      <button class="tab-btn" data-tab="t5">②海外ETF型</button>
+    </div>
+    <a href="#" id="settings-link" class="settings-link-top">⚙ 設定</a>
   </div>
 
   <div class="content">
@@ -179,10 +183,10 @@
   </div>
 
   <div class="tab-panel active" id="t0">
-    <p class="panel-desc">全部 15 檔標的一覽，不含圖表——先看這頁抓重點，需要細節再點「詳情」跳到對應分類頁。進場／出場條件皆為初步草案，門檻數字都還沒經過你確認；核心部位的「出場」多半是「警示、重新檢視」而非真的賣出，衛星部位的「出場」才是比較明確的減碼/停損規則。「本日觸發」欄位是根據真實資料算出的訊號(技術面EMA20穿越、估值面PE百分位、籌碼面外資連續買賣超)，跟你Discord收到的通知邏輯一致。</p>
+    <p class="panel-desc">全部 15 檔標的一覽，不含圖表——先看這頁抓重點，需要細節再點「詳情」跳到對應分類頁。「本日觸發」欄位是根據真實資料算出的訊號(技術面EMA20穿越、估值面PE百分位、籌碼面外資連續買賣超)，跟你Discord收到的通知邏輯一致。最右側兩欄依各分類顯示較有用的重點指標(折溢價/填息天數/三大法人/PE百分位/海外對標等)；進場／出場條件草案請到各分類頁詳情查看。</p>
     <div class="table-scroll">
     <table class="summary">
-      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>進場觸發條件（草案）</th><th>出場觸發條件（草案）</th><th></th></tr></thead>
+      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
       <tbody id="sum-t0"></tbody>
     </table>
     </div>
@@ -608,12 +612,42 @@ function computeTriggers(t){
 }
 
 /* ---------- 渲染 ---------- */
+function overviewExtraCols(t){
+  // 總覽表最右兩欄：依各分類顯示較有用的重點指標(標籤+數值)，取代原本的進場/出場條件文字
+  const tab = t.cfg.tab;
+  if(tab==='t1'){
+    const pd = t.premiumDiscount!=null ? `${t.premiumDiscount.toFixed(2)}%` : '--';
+    const yr = t.ema60v!=null ? (t.price>=t.ema60v?'站上年線':'跌破年線') : '--';
+    return [['折溢價',pd],['年線',yr]];
+  }
+  if(tab==='t2'){
+    const pd = t.premiumDiscount!=null ? `${t.premiumDiscount.toFixed(2)}%` : '--';
+    const fd = t.avgFillDays!=null ? `約${t.avgFillDays.toFixed(0)}天` : (t.fillEventsCount?'尚未填息':'--');
+    return [['折溢價',pd],['填息天數',fd]];
+  }
+  if(tab==='t3'){
+    const chip = t.chipToday!=null ? `${t.chipToday>=0?'買超':'賣超'}${Math.abs(Math.round(t.chipToday/1000)).toLocaleString()}張` : '--';
+    return [['外資近日',chip],['NIM','待補']];
+  }
+  if(tab==='t4'){
+    const pe = t.peRank!=null ? `約${t.peRank.toFixed(0)}%` : '資料不足';
+    return [['PE百分位',pe],['衛星額度',t.cfg.satelliteQuota||'--']];
+  }
+  if(tab==='t5'){
+    const pd = t.premiumDiscount!=null ? `${t.premiumDiscount.toFixed(2)}%` : '--';
+    const ob = t.overseasBenchmark ? `${t.overseasBenchmark.ticker} $${t.overseasBenchmark.price.toFixed(2)}` : '--';
+    return [['折溢價',pd],['海外對標',ob]];
+  }
+  return [['--','--'],['--','--']];
+}
+
 function renderOverview(list){
   const body = document.getElementById('sum-t0');
   body.innerHTML = list.map(t=>{
     const cfg=t.cfg;
     const trigs = t.insufficient ? [] : computeTriggers(t);
     const trig = trigs.length>0 ? `<span class="down">${trigs.join('、')}</span>` : '<span style="color:#9aa0a8">無</span>';
+    const extra = t.insufficient ? [['--','--'],['--','--']] : overviewExtraCols(t);
     return `<tr>
       <td class="nowrap"><span class="cat-badge ${CATCLASS[cfg.tab]}">${CATLABEL[cfg.tab]}</span></td>
       <td class="nowrap">${cfg.symbol}</td>
@@ -622,8 +656,8 @@ function renderOverview(list){
       <td class="nowrap">${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td class="nowrap">${t.insufficient?'--':fmt(t.rsi,1)}</td>
       <td class="nowrap">${trig}</td>
-      <td style="min-width:200px;color:#12633a">${cfg.entryRule}</td>
-      <td style="min-width:200px;color:#8a1f24">${cfg.exitRule}</td>
+      <td class="nowrap"><span style="color:var(--sub);font-size:11px;">${extra[0][0]}</span><br>${extra[0][1]}</td>
+      <td class="nowrap"><span style="color:var(--sub);font-size:11px;">${extra[1][0]}</span><br>${extra[1][1]}</td>
       <td class="nowrap"><button class="detail-btn" onclick="goToDetail('${cfg.tab}','${cfg.symbol}')">詳情</button></td>
     </tr>`;
   }).join('');
@@ -862,8 +896,10 @@ function calcPE(symbol){
 
 /* ---------- 導覽切換 ---------- */
 function activateTab(tabId){
-  document.querySelectorAll('.side-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id===tabId));
+  const wrap = document.querySelector('.topnav-wrap');
+  if(wrap && wrap.scrollIntoView) window.scrollTo({top:0, behavior:'smooth'});
 }
 function goToDetail(tab, symbol){
   activateTab(tab);
@@ -872,7 +908,7 @@ function goToDetail(tab, symbol){
     if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
   }, 30);
 }
-document.querySelectorAll('.side-btn').forEach(btn=>{
+document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>activateTab(btn.dataset.tab));
 });
 
