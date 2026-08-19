@@ -23,6 +23,15 @@
   header p{margin:0;color:var(--sub);font-size:13px;}
   .info-banner{background:var(--info-bg);color:var(--info-text);font-size:13px;padding:8px 24px;border-bottom:1px solid #cfe0fb;}
   .manual-note{background:#fafafa;color:var(--sub);font-size:12px;padding:6px 24px;border-bottom:1px solid var(--border);}
+  .freshness-bar{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;padding:10px 24px;background:#fcfcfd;border-bottom:1px solid var(--border);font-size:12.5px;}
+  .fr-item{color:var(--sub);}
+  .fr-item b{color:var(--text);}
+  .fr-badge{display:inline-block;padding:2px 9px;border-radius:12px;font-weight:700;}
+  .fr-badge.fr-ok{background:#e6f7ee;color:#0f7a3d;}
+  .fr-badge.fr-pending{background:#fff4e5;color:#a15c00;}
+  .fr-badge.fr-warn{background:#ffe6e6;color:#c0262d;}
+  .fr-badge.fr-neutral{background:#eef0f3;color:var(--sub);}
+  .fr-loadtime{margin-left:auto;color:#b0b4bb;}
 
   #settings-panel{max-width:600px;margin:24px auto;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;display:none;}
   #settings-panel.show{display:block;}
@@ -127,9 +136,14 @@
 
 <header>
   <h1>台股追蹤總覽</h1>
-  <p>六分類版面｜資料來源：Supabase（stock_pipeline 每日盤後自動更新）｜最後更新：<span id="last-updated">--</span></p>
+  <p>六分類版面｜資料來源：Supabase（stock_pipeline 每日盤後自動更新）</p>
 </header>
-<div class="info-banner">本頁改抓真實資料：技術面/籌碼面/估值面/填息天數/ETF折溢價/海外對標皆來自 Supabase 資料庫，非隨機模擬。</div>
+<div class="freshness-bar" id="freshness-bar">
+  <span class="fr-item"><b>台股資料日期：</b><span id="fresh-tw" class="fr-badge fr-neutral">--</span></span>
+  <span class="fr-item"><b>美股資料日期：</b><span id="fresh-us" class="fr-badge fr-neutral">--</span></span>
+  <span class="fr-item fr-loadtime"><b>頁面載入時間：</b><span id="last-updated">--</span></span>
+</div>
+<div class="info-banner">本頁改抓真實資料：技術面/籌碼面/估值面/填息天數/ETF折溢價/海外對標/美股機構持股皆來自 Supabase 資料庫，非隨機模擬。「資料日期」跟「頁面載入時間」是兩件事——載入時間只代表你現在打開網頁的當下，不代表股價有更新到今天，請看上方「台股/美股資料日期」欄位判斷實際資料新舊。</div>
 <div class="manual-note">⚠️ 少數欄位目前沒有自動化資料源，仍是你先前手動輸入的參考文字（內扣費用率、追蹤指數說明、選股邏輯、匯率避險狀態、NIM/資本適足率等金融股基本面），畫面上會用較淡的顏色標示，之後有資料源再串接。配置總表(核心/衛星比重)也是你自行輸入的示意數字，不是從實際持股股數換算。</div>
 
 <div id="settings-panel">
@@ -160,6 +174,7 @@
       <span class="nav-divider">衛星</span>
       <button class="tab-btn" data-tab="t4">①個股型</button>
       <button class="tab-btn" data-tab="t5">②海外ETF型</button>
+      <button class="tab-btn" data-tab="t6">③海外個股型</button>
     </div>
     <a href="#" id="settings-link" class="settings-link-top">⚙ 設定</a>
   </div>
@@ -227,8 +242,15 @@
     <div id="detail-t5"></div>
   </div>
 
+  <div class="tab-panel" id="t6">
+    <p class="panel-desc">衛星持股(3)：海外個股型——目前是NVDA(輝達)、GOOG(Alphabet)兩檔美股個股。技術面(價格/EMA/RSI/MACD/KD)為真實資料(來源yfinance)；機構持股表也是真實資料，但只有Yahoo揭露的「前10大機構+前10大基金」，屬季度性質，不是完整13F清單，也不是每日更新。台股沒有的「三大法人每日買賣超」這個資料，美股沒有對應資料源，這裡不會出現。價格為美元計價，跟其他分類頁的台幣計價不能直接相加比較。這兩檔的技術面資料日期是美股自己的交易日，跟台股資料日期不同步，屬正常時差，請看上方「美股資料日期」欄位。</p>
+    <div class="jumpnav" id="jump-t6"></div>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
+    <div id="detail-t6"></div>
+  </div>
+
   <div class="disclaimer">
-    本頁技術面/籌碼面/估值面/填息天數/ETF折溢價/海外對標皆為 Supabase 資料庫真實資料，惟部分欄位(見上方淺色說明列)仍是手動維護的參考文字，非自動更新；配置總表(核心/衛星比重)為手動輸入的示意數字。進出場觸發條件門檻為初步草案，需你自己確認後才正式採用。所有內容僅供參考，不構成投資建議。<br>
+    本頁技術面/籌碼面/估值面/填息天數/ETF折溢價/海外對標/美股機構持股皆為 Supabase 資料庫真實資料，惟部分欄位(見上方淺色說明列)仍是手動維護的參考文字，非自動更新；配置總表(核心/衛星比重)為手動輸入的示意數字。進出場觸發條件門檻為初步草案，需你自己確認後才正式採用。美股機構持股僅涵蓋Yahoo揭露的前10大機構與前10大基金，非完整13F清單，屬季度性質資料。所有內容僅供參考，不構成投資建議，也不構成美國稅務/遺產規劃建議。<br>
     指標定義：EMA20/60 以前 N 日 SMA 為初值，之後依標準EMA公式遞迴計算；RSI(14) 採 Wilder 平滑；MACD(12,26,9) 由 EMA12 減 EMA26 得 DIF，DIF 之 9 日 EMA 得 DEA，柱狀體＝DIF−DEA；KD(9,3,3) 初始 K=D=50；20 日高/低不含當日；PE百分位計算方式與 check_triggers.py 的Discord通知邏輯一致。
   </div>
 
@@ -299,8 +321,44 @@ function peRankOf(sortedAsc, currentPe){
   return below/sortedAsc.length*100;
 }
 
-const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型'};
-const CATCLASS = {t1:'core', t2:'core', t3:'core', t4:'sat', t5:'sat'};
+/* ---------- 資料日期核對機制：判斷「台股資料日期」跟現在時間比對起來是否合理 ----------
+   邏輯(以瀏覽器本機時間視為台灣時間為前提，不處理國定假日，只處理週末)：
+   - 平日20:25(main.py排定執行時間)之後：預期資料應該更新到「今天」
+   - 平日20:25之前：預期資料還停留在「上一個交易日」，這是正常等待中，不是異常
+   - 週六/週日：預期資料應該是「上一個週五」(週五晚上的排程已經跑過)
+   跟這個「預期值」比對，一致才顯示綠色正常，只差一天且還沒到今晚排程時間顯示黃色
+   (等待今晚更新)，落後更多顯示紅色警示(排程可能沒有正常執行)。 */
+function isWeekend(d){ const day=d.getDay(); return day===0||day===6; }
+function prevTradingDay(d){ const r=new Date(d); do{ r.setDate(r.getDate()-1); }while(isWeekend(r)); return r; }
+function toYMD(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function isAfterRunCutoff(now){ return now.getHours()>20 || (now.getHours()===20 && now.getMinutes()>=25); }
+
+function expectedLatestTwTradingDate(now){
+  let d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(isWeekend(d)){
+    while(isWeekend(d)) d.setDate(d.getDate()-1);
+    return toYMD(d);
+  }
+  if(isAfterRunCutoff(now)) return toYMD(d);
+  return toYMD(prevTradingDay(d));
+}
+
+function freshnessStatus(latestDateStr, now){
+  now = now || new Date();
+  if(!latestDateStr) return {level:'warn', label:'尚無資料'};
+  const expected = expectedLatestTwTradingDate(now);
+  if(latestDateStr === expected) return {level:'ok', label:`${latestDateStr}（正常）`};
+  const expectedDateObj = new Date(expected+'T00:00:00');
+  const oneTradingDayBefore = toYMD(prevTradingDay(expectedDateObj));
+  const todayIsWeekend = isWeekend(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+  if(latestDateStr === oneTradingDayBefore && !todayIsWeekend && !isAfterRunCutoff(now)){
+    return {level:'pending', label:`${latestDateStr}（今晚20:25排程後更新，目前屬正常等待中）`};
+  }
+  return {level:'warn', label:`${latestDateStr}（比預期落後，建議檢查Windows工作排程器是否正常執行）`};
+}
+
+const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型'};
+const CATCLASS = {t1:'core', t2:'core', t3:'core', t4:'sat', t5:'sat', t6:'sat'};
 
 /* ---------- 標的設定：只保留「沒有自動化資料源」的手動維護內容 ---------- */
 const TICKERS = [
@@ -463,6 +521,35 @@ const TICKERS = [
    t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，5434是新加入標的)',
    `樣本仍少(新篩選標的)，建議紀律從嚴，跌破EMA60即出清`
  ]},
+
+{tab:'t6',symbol:'NVDA',name:'輝達(NVIDIA)',currency:'USD',institutionalHolders:true,
+ staticFields:[
+   ['資產所在地','美國掛牌個股，非台灣境內資產（手動維護）'],
+   ['遺產稅提醒','非美籍人士持有美股資產超過6萬美元，超過部分需課美國遺產稅18%-40%，2026-08-19已查證，這不是投資建議，請自行評估（手動維護）'],
+   ['集中度提醒','Magnificent 7目前約佔S&P500市值33.9%，NVDA是其中最大貢獻者，若同時持有追蹤S&P500/Nasdaq100的ETF會有曝險重疊（手動維護，2026-08-19查證）'],
+ ],
+ entryRule:'樣本仍少，暫不設加碼條件，以觀察為主（草案，需你自行確認）',
+ exitRule:'跌破EMA60且RSI跌破40，或機構持股連續兩季轉為淨減持時列入觀察（草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20($${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60($${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.institutional && t.institutional.holders.length ? `機構持股資料最新申報季度：${t.institutional.latestReportDate}（Yahoo僅揭露前10大機構+前10大基金，非完整13F清單）` : '機構持股資料尚未取得',
+   `這是美國境內資產，若部位持續加大，建議自行了解美國遺產稅規則（NRA免稅額僅6萬美元）`
+ ]},
+{tab:'t6',symbol:'GOOG',name:'Alphabet(Google)',currency:'USD',institutionalHolders:true,
+ staticFields:[
+   ['資產所在地','美國掛牌個股，非台灣境內資產（手動維護）'],
+   ['遺產稅提醒','非美籍人士持有美股資產超過6萬美元，超過部分需課美國遺產稅18%-40%，2026-08-19已查證，這不是投資建議，請自行評估（手動維護）'],
+   ['波克夏提醒','2026-08-19查證：GOOG與GOOGL的前10大機構持有人名單裡目前都沒有看到波克夏(Berkshire Hathaway)，如果它的持股規模不夠大排進前10名，這裡的機構持股表就不會顯示它，這是資料源(Yahoo僅揭露前10大)的限制，不是抓取失敗（手動維護）'],
+ ],
+ entryRule:'樣本仍少，暫不設加碼條件，以觀察為主（草案，需你自行確認）',
+ exitRule:'跌破EMA60且RSI跌破40，或機構持股連續兩季轉為淨減持時列入觀察（草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20($${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60($${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.institutional && t.institutional.holders.length ? `機構持股資料最新申報季度：${t.institutional.latestReportDate}（前10大都是Blackrock/Vanguard這類指數型資產管理公司，波克夏未在列）` : '機構持股資料尚未取得',
+   `這是美國境內資產，若部位持續加大，建議自行了解美國遺產稅規則（NRA免稅額僅6萬美元）`
+ ]},
 ];
 const TICKER_MAP = {}; // symbol -> 計算後的 t 物件，calcPE() 要用來拿 peBands
 
@@ -479,10 +566,13 @@ let supabaseClient = null;
 
 function fmt(v,d){return v==null||Number.isNaN(v)?'--':Number(v).toFixed(d==null?2:d);}
 function pctBadge(pct){if(pct==null)return '--';const up=pct>=0;return `<span class="${up?'up':'down'}">${up?'▲':'▼'}${up?'+':''}${pct.toFixed(2)}%</span>`;}
+// 美股(currency:'USD')價格前面加$字樣，避免跟其他台幣計價標的的數字混淆
+function priceFmt(t){ const prefix = t.cfg.currency==='USD' ? '$' : ''; return prefix+fmt(t.price,2); }
+function priceFmtV(t,v,d){ const prefix = t.cfg.currency==='USD' ? '$' : ''; return prefix+fmt(v,d); }
 
 /* ---------- 抓單一標的的所有真實資料 ---------- */
 async function fetchTickerRaw(symbol){
-  const [priceRes, valRes, chipRes, etfRes, divRes, obRes, finRes, cfRes, estRes] = await Promise.all([
+  const [priceRes, valRes, chipRes, etfRes, divRes, obRes, finRes, cfRes, estRes, instRes] = await Promise.all([
     supabaseClient.from('daily_price').select('trade_date,open,high,low,close').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(300),
     supabaseClient.from('valuation').select('pe_ratio,trade_date').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1500),
     supabaseClient.from('chip_flow').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(5),
@@ -492,8 +582,9 @@ async function fetchTickerRaw(symbol){
     supabaseClient.from('quarterly_financials').select('*').eq('stock_id',symbol).order('fiscal_quarter',{ascending:false}).limit(8),
     supabaseClient.from('cash_flow_statement').select('*').eq('stock_id',symbol).order('fiscal_quarter',{ascending:false}).limit(4),
     supabaseClient.from('analyst_estimates').select('*').eq('stock_id',symbol).order('report_date',{ascending:false}),
+    supabaseClient.from('institutional_holdings').select('*').eq('stock_id',symbol).order('report_date',{ascending:false}).limit(40),
   ]);
-  for(const r of [priceRes,valRes,chipRes,etfRes,divRes,obRes,finRes,cfRes,estRes]){
+  for(const r of [priceRes,valRes,chipRes,etfRes,divRes,obRes,finRes,cfRes,estRes,instRes]){
     if(r.error) throw new Error(`[${symbol}] ${r.error.message}`);
   }
   return {
@@ -506,7 +597,39 @@ async function fetchTickerRaw(symbol){
     finRows:finRes.data||[],
     cfRows:cfRes.data||[],
     estRows:estRes.data||[],
+    instRows:instRes.data||[],
   };
+}
+
+/* ---------- 機構持股(美股)：依機構名稱分組，比對最新兩次申報算增減 ---------- */
+function processInstitutional(rows){
+  if(!rows || rows.length===0) return null;
+  const byHolder = {};
+  rows.forEach(r=>{
+    if(!byHolder[r.holder_name]) byHolder[r.holder_name]=[];
+    byHolder[r.holder_name].push(r);
+  });
+  const holders = Object.keys(byHolder).map(name=>{
+    const recs = byHolder[name].slice().sort((a,b)=> a.report_date < b.report_date ? 1 : -1); // desc
+    const latest = recs[0];
+    const prev = recs[1];
+    let change = null;
+    if(prev && latest.shares!=null && prev.shares!=null){
+      change = latest.shares - prev.shares;
+    }
+    return {
+      name,
+      holderType: latest.holder_type,
+      shares: latest.shares,
+      pctOut: latest.pct_out,
+      reportDate: latest.report_date,
+      prevReportDate: prev ? prev.report_date : null,
+      change,
+    };
+  });
+  holders.sort((a,b)=> (b.shares||0)-(a.shares||0));
+  const latestReportDate = holders.length ? holders.map(h=>h.reportDate).sort().slice(-1)[0] : null;
+  return {holders, latestReportDate};
 }
 
 /* ---------- 把真實資料組成畫面要用的 t 物件（跟舊版mock的資料結構保持一致，圖表程式碼不用改） ---------- */
@@ -533,7 +656,13 @@ function computeTicker(cfg, raw){
     ema20v:ema20[last], ema60v:ema60[last], rsi:rsiArr[last],
     dif:macd.dif[last], dea:macd.dea[last], osc:macd.osc[last],
     kdk:kd.k[last], kdd:kd.d[last], h20v:h20[last], l20v:l20[last],
+    latestTradeDate: rows[rows.length-1].trade_date, // 這檔標的目前資料庫裡最新的一筆交易日，給頂部「資料日期」核對機制用
   };
+
+  // 機構持股(目前只有衛星(3)海外個股型NVDA/GOOG會有資料，其餘標的自然是null)
+  if(raw.instRows && raw.instRows.length>0){
+    t.institutional = processInstitutional(raw.instRows);
+  }
 
   // ETF淨值/折溢價
   if(raw.etfRow){ t.premiumDiscount = raw.etfRow.premium_discount_pct!=null?Number(raw.etfRow.premium_discount_pct):null; t.pdDate = raw.etfRow.trade_date; }
@@ -638,6 +767,12 @@ function overviewExtraCols(t){
     const ob = t.overseasBenchmark ? `${t.overseasBenchmark.ticker} $${t.overseasBenchmark.price.toFixed(2)}` : '--';
     return [['折溢價',pd],['海外對標',ob]];
   }
+  if(tab==='t6'){
+    const top = t.institutional && t.institutional.holders.length ? t.institutional.holders[0] : null;
+    const topStr = top ? `${top.name}${top.pctOut!=null?` ${top.pctOut.toFixed(2)}%`:''}` : '資料尚未取得';
+    const dateStr = t.institutional ? t.institutional.latestReportDate : '--';
+    return [['最大機構持股',topStr],['申報季度',dateStr]];
+  }
   return [['--','--'],['--','--']];
 }
 
@@ -652,7 +787,7 @@ function renderOverview(list){
       <td class="nowrap"><span class="cat-badge ${CATCLASS[cfg.tab]}">${CATLABEL[cfg.tab]}</span></td>
       <td class="nowrap">${cfg.symbol}</td>
       <td class="nowrap">${cfg.name}${cfg.flag?`<span class="flag">${cfg.flag}</span>`:''}</td>
-      <td class="nowrap">${t.insufficient?'資料累積中':fmt(t.price,2)}</td>
+      <td class="nowrap">${t.insufficient?'資料累積中':priceFmt(t)}</td>
       <td class="nowrap">${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td class="nowrap">${t.insufficient?'--':fmt(t.rsi,1)}</td>
       <td class="nowrap">${trig}</td>
@@ -684,6 +819,12 @@ function tabExtraCols(t, tab){
     const pe = t.peRank!=null ? `約${t.peRank.toFixed(0)}%` : '資料不足';
     return [pe, t.cfg.satelliteQuota||'--'];
   }
+  if(tab==='t6'){
+    const top = t.institutional && t.institutional.holders.length ? t.institutional.holders[0] : null;
+    const topStr = top ? `${top.name}${top.pctOut!=null?` ${top.pctOut.toFixed(2)}%`:''}` : '資料尚未取得';
+    const dateStr = t.institutional ? t.institutional.latestReportDate : '--';
+    return [topStr, dateStr];
+  }
   return ['--','--'];
 }
 
@@ -699,7 +840,7 @@ function renderTab(tab, list){
     const extra = t.insufficient ? ['--','--'] : tabExtraCols(t, tab);
     return `<tr>
       <td>${t.cfg.symbol}</td><td>${t.cfg.name}${t.cfg.flag?`<span class="flag">${t.cfg.flag}</span>`:''}</td>
-      <td>${t.insufficient?'資料累積中':fmt(t.price,2)}</td><td>${t.insufficient?'--':pctBadge(t.pct)}</td>
+      <td>${t.insufficient?'資料累積中':priceFmt(t)}</td><td>${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td>${t.insufficient?'--':fmt(t.rsi,1)}</td><td>${trig}</td>
       <td>${extra[0]}</td><td>${extra[1]}</td>
     </tr>`;
@@ -764,23 +905,54 @@ function renderStockSection(t, tab){
       </div>`;
   }
 
+  let instHtml='';
+  if(cfg.institutionalHolders){
+    const inst = t.institutional;
+    if(!inst || !inst.holders.length){
+      instHtml = `
+      <div class="deep">
+        <h4>機構持股（美股，季度資料）</h4>
+        <div class="chart-empty">尚未取得機構持股資料，main.py 至少要成功執行過一次「機構持股(美股)」步驟才會有內容。</div>
+      </div>`;
+    } else {
+      const rows = inst.holders.map(h=>{
+        const typeLabel = h.holderType==='institutional' ? '機構' : (h.holderType==='mutual_fund' ? '基金' : (h.holderType||'--'));
+        let changeStr = '<span class="todo">無上一季可比對</span>';
+        if(h.change!=null){
+          const chgLots = (h.change/1e6).toFixed(2);
+          changeStr = h.change>0 ? `<span class="up">▲ 增持約${Math.abs(chgLots)}M股（較${h.prevReportDate}）</span>`
+            : h.change<0 ? `<span class="down">▼ 減持約${Math.abs(chgLots)}M股（較${h.prevReportDate}）</span>`
+            : '持平';
+        }
+        return `<tr><td>${h.name}</td><td>${typeLabel}</td><td>${h.shares!=null?(h.shares/1e6).toFixed(2)+'M股':'--'}</td><td>${h.pctOut!=null?h.pctOut.toFixed(2)+'%':'--'}</td><td>${h.reportDate}</td><td>${changeStr}</td></tr>`;
+      }).join('');
+      instHtml = `
+      <div class="deep">
+        <h4>機構持股（美股，最新申報季度：${inst.latestReportDate}，真實資料但屬季度性質）</h4>
+        <table class="mini"><thead><tr><th>機構/基金名稱</th><th>類型</th><th>持股數</th><th>佔流通股%</th><th>申報日期</th><th>較上次申報增減</th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="note-box">僅Yahoo Finance揭露的前10大機構+前10大基金，不是完整13F清單；如果你想追蹤的特定機構沒有出現在上面，代表它不在前10大，不是資料抓取失敗。「增減」是跟同一機構上一次申報比較，第一次出現的機構沒有比較基準會顯示「無上一季可比對」。</div>
+      </div>`;
+    }
+  }
+
   const triggered = trigs.length>0;
+  const isUSD = t.cfg.currency==='USD';
   return `
   <div class="stock-section" id="${cfg.symbol}_${tab}">
     <div class="stock-head">
       <div><h3>${cfg.symbol} ${cfg.name}${cfg.flag?`<span class="flag">${cfg.flag}</span>`:''}</h3>
-      <div class="sub">${allFields.slice(0,2).map(f=>f[0]).join(' ／ ')}</div></div>
+      <div class="sub">${allFields.slice(0,2).map(f=>f[0]).join(' ／ ')}${isUSD?` ／ 資料日期(美股交易日)：${t.latestTradeDate}`:''}</div></div>
       <span class="pill ${triggered?'trig':'none'}">${triggered?trigs.length+'項觸發':'無觸發'}</span>
     </div>
 
     <div class="tech-grid">
-      <div class="tech-cell"><div class="lbl">收盤</div><div class="val">${fmt(t.price,2)}</div></div>
+      <div class="tech-cell"><div class="lbl">收盤${isUSD?'(USD)':''}</div><div class="val">${priceFmt(t)}</div></div>
       <div class="tech-cell"><div class="lbl">漲跌幅</div><div class="val">${pctBadge(t.pct)}</div></div>
       <div class="tech-cell"><div class="lbl">RSI(14)</div><div class="val">${fmt(t.rsi,1)}</div></div>
-      <div class="tech-cell"><div class="lbl">EMA20</div><div class="val">${fmt(t.ema20v,2)}</div><div class="note">${t.ema20v!=null?(t.price>=t.ema20v?'價在上方':'價在下方'):'資料累積中'}</div></div>
-      <div class="tech-cell"><div class="lbl">EMA60</div><div class="val">${fmt(t.ema60v,2)}</div><div class="note">${t.ema60v!=null?(t.price>=t.ema60v?'價在上方':'價在下方'):'資料累積中(需60個交易日)'}</div></div>
-      <div class="tech-cell"><div class="lbl">前20日高</div><div class="val">${fmt(t.h20v,2)}</div></div>
-      <div class="tech-cell"><div class="lbl">前20日低</div><div class="val">${fmt(t.l20v,2)}</div></div>
+      <div class="tech-cell"><div class="lbl">EMA20</div><div class="val">${priceFmtV(t,t.ema20v,2)}</div><div class="note">${t.ema20v!=null?(t.price>=t.ema20v?'價在上方':'價在下方'):'資料累積中'}</div></div>
+      <div class="tech-cell"><div class="lbl">EMA60</div><div class="val">${priceFmtV(t,t.ema60v,2)}</div><div class="note">${t.ema60v!=null?(t.price>=t.ema60v?'價在上方':'價在下方'):'資料累積中(需60個交易日)'}</div></div>
+      <div class="tech-cell"><div class="lbl">前20日高</div><div class="val">${priceFmtV(t,t.h20v,2)}</div></div>
+      <div class="tech-cell"><div class="lbl">前20日低</div><div class="val">${priceFmtV(t,t.l20v,2)}</div></div>
       <div class="tech-cell"><div class="lbl">MACD DIF ／ DEA/OSC</div><div class="val" style="font-size:13px">${fmt(t.dif,2)} ／ ${fmt(t.dea,2)}/${fmt(t.osc,2)}</div></div>
     </div>
 
@@ -798,6 +970,7 @@ function renderStockSection(t, tab){
     <div class="chart-block"><div class="chart-title">KD(9,3,3) 日（虛線為 80/20）</div><canvas id="kd_${cfg.symbol}_${tab}" height="80"></canvas></div>
 
     ${deepHtml}
+    ${instHtml}
 
     <div class="advice">
       <div class="advice-title">投資建議（結合真實資料的技術面/籌碼面/估值面，僅供參考，非投資建議）</div>
@@ -935,11 +1108,31 @@ async function initApp(){
       TICKER_MAP[cfg.symbol]=t;
       return t;
     }));
-    const groups={t1:[],t2:[],t3:[],t4:[],t5:[]};
+    const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[]};
     results.forEach(t=>groups[t.cfg.tab].push(t));
     renderOverview(results);
     Object.keys(groups).forEach(tab=>renderTab(tab, groups[tab]));
-    $('last-updated').textContent = new Date().toLocaleString('zh-TW');
+
+    // 資料日期核對機制：台股/美股分開判斷(美股本來就跟台股有時區落差，不能用同一套邏輯比對)
+    const now = new Date();
+    const twDates = results.filter(t=>!t.insufficient && t.cfg.currency!=='USD').map(t=>t.latestTradeDate).filter(Boolean).sort();
+    const usDates = results.filter(t=>!t.insufficient && t.cfg.currency==='USD').map(t=>t.latestTradeDate).filter(Boolean).sort();
+    const maxTwDate = twDates.length ? twDates[twDates.length-1] : null;
+    const maxUsDate = usDates.length ? usDates[usDates.length-1] : null;
+
+    const twStatus = freshnessStatus(maxTwDate, now);
+    $('fresh-tw').textContent = twStatus.label;
+    $('fresh-tw').className = 'fr-badge fr-'+twStatus.level;
+
+    if(maxUsDate){
+      $('fresh-us').textContent = `${maxUsDate}（美股上一交易日，跟台股有時區落差屬正常，不套用台股的核對邏輯）`;
+      $('fresh-us').className = 'fr-badge fr-neutral';
+    } else {
+      $('fresh-us').textContent = '尚無資料';
+      $('fresh-us').className = 'fr-badge fr-warn';
+    }
+
+    $('last-updated').textContent = now.toLocaleString('zh-TW');
     $('loading').style.display='none';
     $('layout').classList.add('show');
   }catch(e){
