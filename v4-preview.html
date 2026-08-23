@@ -101,6 +101,16 @@
   .cat-grid div .lbl{font-size:11px;color:var(--sub);display:block;}
   .cat-grid div .val{font-size:13px;font-weight:600;}
   .cat-grid div .val.manual{color:var(--sub);font-weight:500;}
+  .static-details{margin-bottom:14px;border:1px dashed var(--border);border-radius:8px;background:#fcfcfa;}
+  .static-details summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;user-select:none;}
+  .static-details summary::-webkit-details-marker{display:none;}
+  .static-details summary::before{content:'▸';font-size:10px;transition:transform .15s;}
+  .static-details[open] summary::before{transform:rotate(90deg);}
+  .static-details summary .cnt{color:var(--sub);font-weight:400;}
+  .static-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px;padding:0 12px 10px 12px;}
+  .static-grid div .lbl{font-size:11px;color:var(--sub);display:block;}
+  .static-grid div .val{font-size:13px;font-weight:500;color:var(--sub);}
+  .static-empty{padding:0 12px 10px 12px;font-size:11.5px;color:var(--sub);}
   .trig-line{font-size:12.5px;color:var(--sub);margin-bottom:10px;}
   .trig-line b.on{color:var(--up);}
   .trigger-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
@@ -108,6 +118,41 @@
   .trigger-box.entry{background:#eafaf1;border-left:3px solid var(--entry);color:#12633a;}
   .trigger-box.exit{background:#fdecec;border-left:3px solid var(--exit);color:#8a1f24;}
   .trigger-box .tt{font-weight:700;margin-bottom:3px;display:block;}
+  .trigger-live{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(0,0,0,0.12);font-size:11.5px;line-height:1.7;}
+  .sig-inline{white-space:nowrap;}
+  .sig-inline.full{font-weight:700;}
+  .sig-inline.near{color:#a15c00;font-weight:600;}
+  .ai-verdict-card{background:#f8f9fb;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .ai-verdict-title{font-weight:700;font-size:13.5px;margin-bottom:8px;}
+  .ai-verdict-badge{display:inline-block;font-size:13px;font-weight:700;padding:4px 12px;border-radius:14px;margin-bottom:6px;}
+  .ai-verdict-badge.entry{background:#eafaf1;color:var(--entry);}
+  .ai-verdict-badge.exit{background:#fdecec;color:var(--exit);}
+  .ai-verdict-badge.watch{background:#fff4e5;color:#a15c00;}
+  .ai-verdict-badge.neutral{background:#eef0f3;color:var(--sub);}
+  .ai-verdict-hint{font-size:12px;color:var(--sub);margin:2px 0 10px;line-height:1.6;}
+  .factor-section-title{font-size:12px;font-weight:700;color:var(--sub);margin:10px 0 4px;}
+  .factor-list{margin:0;padding-left:18px;font-size:12.5px;line-height:1.8;}
+  .factor-list.bull li{color:#12633a;}
+  .factor-list.bear li{color:#8a1f24;}
+  .factor-empty{font-size:12px;color:var(--sub);}
+  .next-trig{font-size:12.5px;padding:3px 0;}
+  .next-trig.buy{color:var(--entry);}
+  .next-trig.sell{color:var(--exit);}
+  .next-trig.caution{color:#a15c00;}
+  .next-trig-or{font-size:11px;color:var(--sub);text-align:center;padding:1px 0;}
+  .ai-score-card{background:#f8f9fb;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+  .score-total-row{display:flex;align-items:center;gap:10px;margin:4px 0 4px;}
+  .score-total-num{font-size:26px;font-weight:800;}
+  .score-total-max{font-size:14px;font-weight:600;color:var(--sub);}
+  .score-action{font-size:12.5px;color:var(--sub);margin-bottom:10px;}
+  .score-breakdown{display:flex;flex-direction:column;gap:6px;}
+  .score-row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .score-cat{width:76px;flex-shrink:0;color:var(--sub);white-space:nowrap;}
+  .score-bar-wrap{flex:1;height:8px;background:#eef0f3;border-radius:4px;overflow:hidden;}
+  .score-bar{display:block;height:100%;background:var(--accent);border-radius:4px;}
+  .score-val{width:56px;flex-shrink:0;text-align:right;font-weight:600;white-space:nowrap;}
+  .score-note{font-size:10.5px;color:var(--sub);margin:-2px 0 4px 84px;line-height:1.5;}
+  .score-empty{font-size:12px;color:var(--sub);}
   .chart-block{margin-bottom:14px;}
   .chart-title{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:4px;}
   .chart-empty{font-size:12px;color:var(--sub);padding:20px;text-align:center;background:#fafbfc;border-radius:8px;}
@@ -126,6 +171,37 @@
   .pe-model button:disabled{background:#c7cbd3;cursor:not-allowed;}
   .pe-result{margin-top:10px;font-size:12.5px;}
   .pe-result .band{display:inline-block;margin-right:14px;}
+  .sig-matrix{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}
+  .sig-matrix th{background:#fafbfc;text-align:left;padding:6px 8px;color:var(--sub);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .sig-matrix td{padding:6px 8px;border-bottom:1px solid #f0f1f3;vertical-align:top;}
+  .sig-matrix tr.on td{background:#f7fcf9;}
+  .sig-name{font-weight:700;white-space:nowrap;}
+  .sig-cond-list{margin:0;padding-left:14px;list-style:none;}
+  .sig-cond-list li{margin-bottom:2px;}
+  .sig-cond-list li.met{color:#12633a;}
+  .sig-cond-list li.unmet{color:var(--sub);}
+  .sig-state{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .sig-state.on{background:#eafaf1;color:var(--entry);}
+  .sig-state.off{background:#eef0f3;color:var(--sub);}
+  .sig-state.near{background:#fff4e5;color:#a15c00;}
+  .sig-action{font-weight:700;white-space:nowrap;}
+  .sig-action.buy{color:var(--entry);}
+  .sig-action.sell{color:var(--exit);}
+  .sig-action.caution{color:#a15c00;}
+  .sig-action.near{color:#a15c00;font-weight:600;}
+  .sig-section-title{font-size:12.5px;font-weight:700;color:var(--sub);margin:14px 0 6px;}
+  .sig-engine-note{font-size:11.5px;color:var(--sub);margin:6px 0 14px;line-height:1.6;}
+  .ai-badge-cell{display:flex;flex-direction:column;gap:2px;}
+  .ai-sig-pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700;white-space:nowrap;}
+  .ai-sig-pill.buy{background:#eafaf1;color:var(--entry);}
+  .ai-sig-pill.sell{background:#fdecec;color:var(--exit);}
+  .ai-sig-pill.caution{background:#fff4e5;color:#a15c00;}
+  .score-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+  .score-badge.entry{background:#eafaf1;color:var(--entry);}
+  .score-badge.watch{background:#fff4e5;color:#a15c00;}
+  .score-badge.exit{background:#fdecec;color:var(--exit);}
+  .score-methodology{margin-top:24px;padding:14px 16px;background:#fafafa;border:1px dashed var(--border);border-radius:10px;font-size:11.5px;color:var(--sub);line-height:1.9;}
+  .score-methodology-title{font-weight:700;color:var(--text);margin-bottom:6px;font-size:12.5px;}
   .rule-box{background:#f4f6fb;border-left:3px solid var(--accent);padding:8px 10px;font-size:12px;color:#334;margin-bottom:14px;border-radius:0 6px 6px 0;}
   .quota-box{background:#fff7ea;border-left:3px solid var(--sat);padding:8px 10px;font-size:12px;color:#7a4b00;margin-bottom:14px;border-radius:0 6px 6px 0;}
   .note-box{background:#fafafa;border-left:3px solid #c9ccd2;padding:8px 10px;font-size:12px;color:var(--sub);margin-top:8px;margin-bottom:14px;border-radius:0 6px 6px 0;}
@@ -201,7 +277,7 @@
     <p class="panel-desc">全部 15 檔標的一覽，不含圖表——先看這頁抓重點，需要細節再點「詳情」跳到對應分類頁。「本日觸發」欄位是根據真實資料算出的訊號(技術面EMA20穿越、估值面PE百分位、籌碼面外資連續買賣超)，跟你Discord收到的通知邏輯一致。最右側兩欄依各分類顯示較有用的重點指標(折溢價/填息天數/三大法人/PE百分位/海外對標等)；進場／出場條件草案請到各分類頁詳情查看。</p>
     <div class="table-scroll">
     <table class="summary">
-      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
+      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
       <tbody id="sum-t0"></tbody>
     </table>
     </div>
@@ -210,43 +286,55 @@
   <div class="tab-panel" id="t1">
     <p class="panel-desc">核心部位(1)：指數型ETF——回答「大盤曝險有沒有走偏」，不是「今天要不要買賣」。技術圖表(價格/EMA/20日高低、RSI、MACD、KD)與折溢價率皆為真實資料；內扣費用率、成分集中度等欄位為手動維護的參考文字。</p>
     <div class="jumpnav" id="jump-t1"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>折溢價</th><th>季線/年線</th></tr></thead><tbody id="sum-t1"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>季線/年線</th></tr></thead><tbody id="sum-t1"></tbody></table>
     <div id="detail-t1"></div>
   </div>
 
   <div class="tab-panel" id="t2">
     <p class="panel-desc">核心部位(2)：高股息ETF——回答「配息穩不穩、成分股邏輯有沒有變質」。折溢價與填息天數為真實資料（填息天數取自最近幾次除息紀錄的平均值）。</p>
     <div class="jumpnav" id="jump-t2"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t2"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t2"></tbody></table>
     <div id="detail-t2"></div>
   </div>
 
   <div class="tab-panel" id="t3">
     <p class="panel-desc">核心部位(3)：金融股——技術面／籌碼面為真實資料；NIM、資本適足率、每股淨值、ROE 待補資料源，先留空。</p>
     <div class="jumpnav" id="jump-t3"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>三大法人(近日)</th><th>NIM</th></tr></thead><tbody id="sum-t3"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>三大法人(近日)</th><th>NIM</th></tr></thead><tbody id="sum-t3"></tbody></table>
     <div id="detail-t3"></div>
   </div>
 
   <div class="tab-panel" id="t4">
     <p class="panel-desc">衛星持股(1)：個股型——技術面、籌碼面、財報面、現金流量表、PE歷史百分位評價模型皆為真實資料；分析師目標價需你自己到Supabase Table Editor的analyst_estimates表手動維護。新標的(5434)歷史資料仍在累積中，PE百分位等需要較長歷史的欄位可能會顯示「資料不足」。</p>
     <div class="jumpnav" id="jump-t4"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t4"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t4"></tbody></table>
     <div id="detail-t4"></div>
   </div>
 
   <div class="tab-panel" id="t5">
     <p class="panel-desc">衛星持股(2)：海外ETF型——折溢價為真實資料；新增「海外對標」欄位，用可交易的美股ETF(VOO/QQQ/VNM)當代理價格，取代抓不到的原始指數本身，兩者有追蹤誤差與匯率落差，僅供方向性參考。衛星額度與 Tab4 共用同一個10%上限。</p>
     <div class="jumpnav" id="jump-t5"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>折溢價</th><th>海外對標</th></tr></thead><tbody id="sum-t5"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>海外對標</th></tr></thead><tbody id="sum-t5"></tbody></table>
     <div id="detail-t5"></div>
   </div>
 
   <div class="tab-panel" id="t6">
     <p class="panel-desc">衛星持股(3)：海外個股型——目前是NVDA(輝達)、GOOG(Alphabet)兩檔美股個股。技術面(價格/EMA/RSI/MACD/KD)為真實資料(來源yfinance)；機構持股表也是真實資料，但只有Yahoo揭露的「前10大機構+前10大基金」，屬季度性質，不是完整13F清單，也不是每日更新。台股沒有的「三大法人每日買賣超」這個資料，美股沒有對應資料源，這裡不會出現。價格為美元計價，跟其他分類頁的台幣計價不能直接相加比較。這兩檔的技術面資料日期是美股自己的交易日，跟台股資料日期不同步，屬正常時差，請看上方「美股資料日期」欄位。</p>
     <div class="jumpnav" id="jump-t6"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
     <div id="detail-t6"></div>
+  </div>
+
+  <div class="score-methodology">
+    <div class="score-methodology-title">🎯 Investment Signal Score 評分方式說明（六個頁面共用同一套規則，此區塊不受分頁切換影響，永遠顯示在目前分頁內容最下方）</div>
+    總分100分，分5大類加權，每次載入頁面都依當時的技術資料重新即時計算，不是寫死的固定值：<br>
+    ・趨勢 30分：價格&gt;EMA20(+10)／EMA20&gt;EMA60(+10)／價格&gt;EMA60(+10)<br>
+    ・動能 25分：MACD DIF&gt;DEA(+10)／MACD柱狀體&gt;0(+5)／柱狀體連續3天增加(+5)／RSI&gt;50(+5)<br>
+    ・超買超賣 20分：RSI介於40~60(+5)／KD黃金交叉(+5)／近5日內K&lt;30後反轉向上(+10)<br>
+    ・支撐/壓力 15分：價格在EMA20附近±2%(+5)／價格在EMA60附近±2%(+5)／價格在20日低點3%以內(+5)<br>
+    ・市場環境 10分：目前沒有獨立的大盤風險/Regime資料源(跟先前規劃、還沒做的融資維持率警示是同一件事)，固定給中性5分，之後接上大盤風險指標才會動態計算<br>
+    對照表：90-100強力買進／80-89買進／70-79偏多／60-69中性偏多／50-59中性／40-49偏弱／30-39弱勢／0-29強烈防守。<br>
+    這是規則式加權評分，不是機器學習模型，也不是股票精確評價；分數只反映納入計算的這幾項技術指標，不包含基本面、籌碼面、總經環境等因素，僅供參考、不構成投資建議，跟每個標的詳情頁的「AI技術面判斷」(ENTRY/WATCH/EXIT)是兩套獨立邏輯，建議互相參考、不要只看單一數字。
   </div>
 
   <div class="disclaimer">
@@ -740,6 +828,208 @@ function computeTriggers(t){
   return trigs;
 }
 
+/* ---------- 第一代AI進出場引擎（4訊號，2026-08-23使用者指定規格；2026-08-24加入分級判斷+風險提醒訊號）----------
+   這是跟上面computeTriggers()完全獨立的第二套邏輯，刻意分開：
+   - computeTriggers()：門檻跟check_triggers.py的Discord通知對齊，不要改它的判斷邏輯。
+   - computeSignalEngine()：使用者要的「多條件AND訊號矩陣」(核心進出場訊號)，只用在畫面
+     顯示(詳情頁矩陣表+總覽欄位)，不會寫回資料庫、不會觸發Discord。四個訊號分別對應：
+       S1 超跌反轉 → 判斷"低檔反轉"／操作"分批買進"   S2 動能啟動 → "動能轉強"／"順勢加碼"
+       S3 多頭回檔 → "回檔獲支撐"／"逢低承接"         S4 趨勢反轉 → "趨勢轉弱"／"降風險／停利停損"
+   - computeWarningSignals()：額外的獨立警示訊號(RSI過熱/KD高檔死叉/RSI背離)，不是買賣訊號，
+     是提醒使用者留意，跟上面4個核心訊號分開呈現，避免混淆。
+   每個訊號回傳「今天」這一根K棒的狀態；牽涉交叉的條件(K穿D／站回EMA20／MACD翻正／
+   跌破EMA60／MACD死叉)是比較「今天vs昨天」抓「剛發生的交叉」，不是「已經持續一段時間」
+   的狀態，這樣才會跟使用者原本抱怨「條件太窄很難觸發」的訴求一致(用交叉时刻而非長期
+   維持某個區間，訊號才會實際亮起來)。資料不足(暖身期不夠、只有1天資料等)一律顯示
+   「資料不足」，不會誤判為條件不成立。
+
+   分級判斷(tier)：不是單純0/1，而是看N個條件裡成立幾個：
+   - met===total → 'full'(全部成立，訊號正式觸發)
+   - total>=3 且 met>=total-1 → 'near'(只差一項，顯示"接近成立"，緩解「太難觸發」的抱怨)
+   - 其餘 → 'none'(尚未成立)
+   只有2個條件以下的訊號(如KD高檔死叉、RSI過熱)不會有'near'，是因為條件本身較少、
+   用"接近成立"意義不大，維持全有全無的判斷比較不會誤導。
+*/
+function tierOf(conds){
+  const total = conds.length;
+  const met = conds.filter(c=>c.met).length;
+  let tier = 'none';
+  if(total>0 && met===total) tier='full';
+  else if(total>=3 && met>=total-1) tier='near';
+  return {met, total, tier};
+}
+
+function computeSignalEngine(t){
+  if(t.insufficient || !t.closes || t.closes.length===0) return [];
+  const n = t.closes.length;
+  const i = n-1, y = n-2;
+  const has2 = n>=2;
+
+  const val=(v,d)=> v==null ? null : Number(v.toFixed(d==null?2:d));
+  const cond=(label,met,detail)=>({label, met: met===true, detail: detail==null?'--':detail});
+  const unknown=(label)=>({label, met:false, detail:'資料不足'});
+
+  const rsiNow=t.rsiArr[i];
+  const kNow=t.kd.k[i], dNow=t.kd.d[i], kYest=has2?t.kd.k[y]:null, dYest=has2?t.kd.d[y]:null;
+  const emaNow=t.ema20[i], ema60Now=t.ema60[i], emaYest=has2?t.ema20[y]:null, ema60Yest=has2?t.ema60[y]:null;
+  const closeNow=t.closes[i], closeYest=has2?t.closes[y]:null;
+  const oscNow=t.macd.osc[i], oscYest=has2?t.macd.osc[y]:null;
+  const difNow=t.macd.dif[i], deaNow=t.macd.dea[i], difYest=has2?t.macd.dif[y]:null, deaYest=has2?t.macd.dea[y]:null;
+  const l20Yest=has2?t.l20[y]:null;
+
+  const signals=[];
+
+  // S1 超跌反轉：RSI<35 + KD低檔 + K上穿D + 價格重新站回20日低點
+  {
+    const c1 = rsiNow!=null ? cond('RSI<35', rsiNow<35, `RSI=${val(rsiNow,1)}`) : unknown('RSI<35');
+    const c2 = (kNow!=null && dNow!=null) ? cond('KD低檔(K<30且D<30)', kNow<30 && dNow<30, `K=${val(kNow,1)} D=${val(dNow,1)}`) : unknown('KD低檔(K<30且D<30)');
+    const c3 = (has2 && kNow!=null && dNow!=null && kYest!=null && dYest!=null)
+      ? cond('K上穿D(黃金交叉)', kYest<=dYest && kNow>dNow, `昨K${val(kYest,1)}/D${val(dYest,1)} → 今K${val(kNow,1)}/D${val(dNow,1)}`)
+      : unknown('K上穿D(黃金交叉)');
+    const c4 = (has2 && closeNow!=null && closeYest!=null && l20Yest!=null)
+      ? cond('價格重新站回20日低點', closeYest<=l20Yest && closeNow>l20Yest, `20日低點約${val(l20Yest,2)}，昨收${val(closeYest,2)} → 今收${val(closeNow,2)}`)
+      : unknown('價格重新站回20日低點');
+    const conds=[c1,c2,c3,c4];
+    const {met,total,tier} = tierOf(conds);
+    signals.push({id:'S1', name:'超跌反轉', emoji:'🟢', judgment:'低檔反轉', action:'分批買進', direction:'buy', category:'core', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  // S2 動能啟動：價格突破EMA20 + MACD Histogram翻正 + RSI>50
+  {
+    const c1 = (has2 && closeNow!=null && closeYest!=null && emaNow!=null && emaYest!=null)
+      ? cond('價格突破EMA20', closeYest<=emaYest && closeNow>emaNow, `昨收${val(closeYest,2)}(EMA20 ${val(emaYest,2)}) → 今收${val(closeNow,2)}(EMA20 ${val(emaNow,2)})`)
+      : unknown('價格突破EMA20');
+    const c2 = (has2 && oscNow!=null && oscYest!=null)
+      ? cond('MACD柱狀體翻正', oscYest<=0 && oscNow>0, `昨OSC=${val(oscYest,2)} → 今OSC=${val(oscNow,2)}`)
+      : unknown('MACD柱狀體翻正');
+    const c3 = rsiNow!=null ? cond('RSI>50', rsiNow>50, `RSI=${val(rsiNow,1)}`) : unknown('RSI>50');
+    const conds=[c1,c2,c3];
+    const {met,total,tier} = tierOf(conds);
+    signals.push({id:'S2', name:'動能啟動', emoji:'🟢', judgment:'動能轉強', action:'順勢加碼', direction:'buy', category:'core', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  // S3 多頭回檔(合併原「多頭確認」+「回檔承接」)：EMA20>EMA60 + 價格回踩EMA20 + RSI 40~55 + KD低檔金叉
+  {
+    const c1 = (emaNow!=null && ema60Now!=null) ? cond('EMA20>EMA60(多頭排列)', emaNow>ema60Now, `EMA20=${val(emaNow,2)} EMA60=${val(ema60Now,2)}`) : unknown('EMA20>EMA60(多頭排列)');
+    const c2 = (t.lows[i]!=null && closeNow!=null && emaNow!=null)
+      ? cond('價格回踩EMA20', t.lows[i]<=emaNow && closeNow>=emaNow*0.99, `當日低點${val(t.lows[i],2)} / 收盤${val(closeNow,2)} vs EMA20 ${val(emaNow,2)}`)
+      : unknown('價格回踩EMA20');
+    const c3 = rsiNow!=null ? cond('RSI介於40~55', rsiNow>=40 && rsiNow<=55, `RSI=${val(rsiNow,1)}`) : unknown('RSI介於40~55');
+    const c4 = (has2 && kNow!=null && dNow!=null && kYest!=null && dYest!=null)
+      ? cond('KD低檔金叉(K<50且K上穿D)', kNow<50 && kYest<=dYest && kNow>dNow, `昨K${val(kYest,1)}/D${val(dYest,1)} → 今K${val(kNow,1)}/D${val(dNow,1)}`)
+      : unknown('KD低檔金叉(K<50且K上穿D)');
+    const conds=[c1,c2,c3,c4];
+    const {met,total,tier} = tierOf(conds);
+    signals.push({id:'S3', name:'多頭回檔', emoji:'🟢', judgment:'回檔獲支撐', action:'逢低承接', direction:'buy', category:'core', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  // S4 趨勢反轉(加強版EMA60跌破)：價格跌破EMA60 + EMA20<EMA60 + MACD死叉 + RSI<45
+  {
+    const c1 = (has2 && closeNow!=null && closeYest!=null && ema60Now!=null && ema60Yest!=null)
+      ? cond('價格跌破EMA60', closeYest>=ema60Yest && closeNow<ema60Now, `昨收${val(closeYest,2)}(EMA60 ${val(ema60Yest,2)}) → 今收${val(closeNow,2)}(EMA60 ${val(ema60Now,2)})`)
+      : unknown('價格跌破EMA60');
+    const c2 = (emaNow!=null && ema60Now!=null) ? cond('EMA20<EMA60(空頭排列)', emaNow<ema60Now, `EMA20=${val(emaNow,2)} EMA60=${val(ema60Now,2)}`) : unknown('EMA20<EMA60(空頭排列)');
+    const c3 = (has2 && difNow!=null && deaNow!=null && difYest!=null && deaYest!=null)
+      ? cond('MACD死叉', difYest>=deaYest && difNow<deaNow, `昨DIF${val(difYest,2)}/DEA${val(deaYest,2)} → 今DIF${val(difNow,2)}/DEA${val(deaNow,2)}`)
+      : unknown('MACD死叉');
+    const c4 = rsiNow!=null ? cond('RSI<45', rsiNow<45, `RSI=${val(rsiNow,1)}`) : unknown('RSI<45');
+    const conds=[c1,c2,c3,c4];
+    const {met,total,tier} = tierOf(conds);
+    signals.push({id:'S4', name:'趨勢反轉', emoji:'🔴', judgment:'趨勢轉弱', action:'降風險／停利停損', direction:'sell', category:'core', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  return signals;
+}
+
+/* ---------- 額外的獨立警示訊號(2026-08-24新增，跟上面4個核心AND訊號分開判斷) ----------
+   W1/W2是單一標的當下狀態的提醒(不用比對歷史高低點)；W3/W4是背離判斷，需要比對「本次高/低點」
+   跟「前一次高/低點」的RSI有沒有同步創高/創低，用rollHigh/rollLow(既有的通用函式)重新算一次
+   close-based的滾動高低點(cHigh20/cLow20，不是原本price圖用的highs/lows-based h20/l20)。
+   背離判斷至少需要30個交易日資料才有意義，資料不夠時該2個訊號會直接顯示「資料不足」。
+*/
+function computeWarningSignals(t){
+  if(t.insufficient || !t.closes || t.closes.length===0) return [];
+  const n = t.closes.length;
+  const i = n-1, y = n-2;
+  const has2 = n>=2;
+  const closes = t.closes, rsiArr = t.rsiArr, dates = t.dates;
+
+  const val=(v,d)=> v==null ? null : Number(v.toFixed(d==null?2:d));
+  const cond=(label,met,detail)=>({label, met: met===true, detail: detail==null?'--':detail});
+  const unknown=(label)=>({label, met:false, detail:'資料不足'});
+
+  const rsiNow = rsiArr[i];
+  const kNow=t.kd.k[i], dNow=t.kd.d[i], kYest=has2?t.kd.k[y]:null, dYest=has2?t.kd.d[y]:null;
+
+  const warnings=[];
+
+  // W1 RSI過熱：RSI>70，單一條件，純提醒不用等交叉
+  {
+    const c1 = rsiNow!=null ? cond('RSI>70', rsiNow>70, `RSI=${val(rsiNow,1)}`) : unknown('RSI>70');
+    const conds=[c1];
+    const {met,total,tier} = tierOf(conds);
+    warnings.push({id:'W1', name:'RSI過熱', emoji:'🟠', judgment:'短線過熱', action:'不追', direction:'caution', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  // W2 KD高檔死叉：K>80 且 K從上往下穿破D
+  {
+    const c1 = kNow!=null ? cond('K>80(高檔)', kNow>80, `K=${val(kNow,1)}`) : unknown('K>80(高檔)');
+    const c2 = (has2 && kNow!=null && dNow!=null && kYest!=null && dYest!=null)
+      ? cond('K死叉D(K下穿D)', kYest>=dYest && kNow<dNow, `昨K${val(kYest,1)}/D${val(dYest,1)} → 今K${val(kNow,1)}/D${val(dNow,1)}`)
+      : unknown('K死叉D(K下穿D)');
+    const conds=[c1,c2];
+    const {met,total,tier} = tierOf(conds);
+    warnings.push({id:'W2', name:'KD高檔死叉', emoji:'🟠', judgment:'動能轉弱', action:'減碼觀察', direction:'caution', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
+  // W3/W4 RSI背離：用收盤價算的20日滾動高/低點，找「今天是否創新高/新低」，
+  // 再往前找上一次同樣創新高/新低的那一天，比較兩次的RSI有沒有同步創高/創低。
+  if(n>=30){
+    const cHigh20 = rollHigh(closes,20), cLow20 = rollLow(closes,20);
+    const gap=5, lookback=60;
+
+    // W3 頂背離：價格創新高，RSI沒有跟著創新高
+    {
+      const isNewHigh = closes[i]!=null && cHigh20[i]!=null && closes[i]>=cHigh20[i];
+      let priorIdx=null;
+      for(let j=i-gap; j>=Math.max(0,i-lookback); j--){
+        if(closes[j]!=null && cHigh20[j]!=null && closes[j]>=cHigh20[j]){ priorIdx=j; break; }
+      }
+      const c1 = cond('今日創20日新高', isNewHigh, closes[i]!=null?`今收${val(closes[i],2)}`:'--');
+      const c2 = (priorIdx!=null && rsiArr[i]!=null && rsiArr[priorIdx]!=null)
+        ? cond('RSI未同步創高(頂背離)', isNewHigh && closes[i]>closes[priorIdx] && rsiArr[i]<rsiArr[priorIdx],
+            `本次高點(${dates[i]})RSI=${val(rsiArr[i],1)} vs 前次高點(${dates[priorIdx]})RSI=${val(rsiArr[priorIdx],1)}`)
+        : unknown('RSI未同步創高(頂背離)');
+      const conds=[c1,c2];
+      const {met,total,tier} = tierOf(conds);
+      warnings.push({id:'W3', name:'RSI頂背離', emoji:'🔴', judgment:'趨勢警戒', action:'減碼', direction:'sell', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+    }
+
+    // W4 底背離：價格創新低，RSI沒有跟著創新低(反轉徵兆)
+    {
+      const isNewLow = closes[i]!=null && cLow20[i]!=null && closes[i]<=cLow20[i];
+      let priorIdx=null;
+      for(let j=i-gap; j>=Math.max(0,i-lookback); j--){
+        if(closes[j]!=null && cLow20[j]!=null && closes[j]<=cLow20[j]){ priorIdx=j; break; }
+      }
+      const c1 = cond('今日創20日新低', isNewLow, closes[i]!=null?`今收${val(closes[i],2)}`:'--');
+      const c2 = (priorIdx!=null && rsiArr[i]!=null && rsiArr[priorIdx]!=null)
+        ? cond('RSI未同步創低(底背離)', isNewLow && closes[i]<closes[priorIdx] && rsiArr[i]>rsiArr[priorIdx],
+            `本次低點(${dates[i]})RSI=${val(rsiArr[i],1)} vs 前次低點(${dates[priorIdx]})RSI=${val(rsiArr[priorIdx],1)}`)
+        : unknown('RSI未同步創低(底背離)');
+      const conds=[c1,c2];
+      const {met,total,tier} = tierOf(conds);
+      warnings.push({id:'W4', name:'RSI底背離', emoji:'🟢', judgment:'反轉可能', action:'觀察買進', direction:'buy', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+    }
+  } else {
+    const note = [{label:'資料不足(需至少30個交易日)', met:false, detail:`目前僅${n}筆`}];
+    warnings.push({id:'W3', name:'RSI頂背離', emoji:'🔴', judgment:'趨勢警戒', action:'減碼', direction:'sell', category:'warning', conditions:note, met:0, total:1, tier:'none', triggered:false});
+    warnings.push({id:'W4', name:'RSI底背離', emoji:'🟢', judgment:'反轉可能', action:'觀察買進', direction:'buy', category:'warning', conditions:note, met:0, total:1, tier:'none', triggered:false});
+  }
+
+  return warnings;
+}
+
 /* ---------- 渲染 ---------- */
 function overviewExtraCols(t){
   // 總覽表最右兩欄：依各分類顯示較有用的重點指標(標籤+數值)，取代原本的進場/出場條件文字
@@ -776,6 +1066,259 @@ function overviewExtraCols(t){
   return [['--','--'],['--','--']];
 }
 
+/* ---------- AI進出場引擎的畫面呈現：詳情頁矩陣表(核心+風險提醒) + 總覽欄位小徽章 ---------- */
+function computeAllSignals(t){
+  return computeSignalEngine(t).concat(computeWarningSignals(t));
+}
+function renderSignalMatrixRows(list){
+  return list.map(s=>{
+    const condLis = s.conditions.map(c=>`<li class="${c.met?'met':'unmet'}">${c.met?'✓':'✗'} ${c.label}<span style="color:var(--sub);font-size:10.5px;">（${c.detail}）</span></li>`).join('');
+    const stateHtml = s.tier==='full' ? `<span class="sig-state on">✅ ${s.judgment}</span>`
+      : s.tier==='near' ? `<span class="sig-state near">🟡 接近成立（${s.met}/${s.total}）</span>`
+      : `<span class="sig-state off">尚未成立（${s.met}/${s.total}）</span>`;
+    const actionHtml = s.tier==='full' ? `<span class="sig-action ${s.direction}">${s.emoji} ${s.action}</span>`
+      : s.tier==='near' ? `<span class="sig-action near">🟡 觀察中，尚未達門檻</span>`
+      : `<span style="color:#c9ccd2">--</span>`;
+    return `<tr class="${s.tier==='full'?'on':''}">
+      <td><span class="sig-name">${s.emoji} ${s.name}</span></td>
+      <td><ul class="sig-cond-list">${condLis}</ul></td>
+      <td>${stateHtml}</td>
+      <td>${actionHtml}</td>
+    </tr>`;
+  }).join('');
+}
+function renderSignalMatrix(t){
+  const core = computeSignalEngine(t);
+  const warn = computeWarningSignals(t);
+  if(!core.length && !warn.length){
+    return '<div class="sig-engine-note">資料不足，AI進出場引擎至少需要2個交易日的資料才能判斷交叉訊號，等main.py多跑幾天後會自動可用。</div>';
+  }
+  const coreTable = core.length ? `
+    <table class="sig-matrix">
+      <thead><tr><th>訊號</th><th>條件（AND，需全部成立才算觸發；差一項會顯示「接近成立」）</th><th>AI判斷</th><th>建議操作</th></tr></thead>
+      <tbody>${renderSignalMatrixRows(core)}</tbody>
+    </table>` : '';
+  const warnTable = warn.length ? `
+    <div class="sig-section-title">⚠️ 風險提醒訊號（獨立判斷，不是買賣訊號，不計入上方核心訊號的AND邏輯）</div>
+    <table class="sig-matrix">
+      <thead><tr><th>訊號</th><th>條件</th><th>AI判斷</th><th>建議操作</th></tr></thead>
+      <tbody>${renderSignalMatrixRows(warn)}</tbody>
+    </table>` : '';
+  return `${coreTable}${warnTable}
+    <div class="sig-engine-note">⚠️ 第一代規則式訊號矩陣（純技術指標條件比對，不是機器學習模型），僅供參考、不構成投資建議；門檻（如KD&lt;30、RSI&lt;35、RSI&gt;70等）為初版預設值，之後可依實際觸發頻率再調整。「接近成立」代表只差一項條件，方便觀察但不是正式訊號。跟上方「本日觸發」欄位是完全獨立的邏輯，彼此不影響，也不會發Discord通知。</div>`;
+}
+function overviewSignalBadges(t){
+  // 總覽表「AI訊號」欄位：只列出今天全部條件成立(tier==='full')的訊號，核心/風險提醒都算，用小徽章呈現，跟「本日觸發」欄位刻意分開放
+  const all = computeAllSignals(t);
+  const on = all.filter(s=>s.tier==='full');
+  if(on.length===0) return '<span style="color:#9aa0a8">--</span>';
+  return `<div class="ai-badge-cell">${on.map(s=>`<span class="ai-sig-pill ${s.direction}">${s.emoji}${s.name}</span>`).join('')}</div>`;
+}
+function overviewScoreBadge(t){
+  // 總覽/各分頁表格「Score」欄位：顯示Investment Signal Score總分+燈號，跟computeSignalScore()同一套邏輯
+  const s = computeSignalScore(t);
+  if(!s) return '<span style="color:#9aa0a8">--</span>';
+  return `<span class="score-badge ${s.tier.level}">${s.tier.emoji} ${s.total}</span>`;
+}
+
+/* ---------- 2026-08-24新增：把AI訊號結果串進「進場/出場觸發條件」草案框 + 「投資建議」區塊 ----------
+   使用者原本的entryRule/exitRule/advice()都是每檔標的各自寫死的靜態文字(草案規則說明)，
+   本身不會變。這裡不去改那些靜態文字，而是在旁邊多加一段「目前AI訊號」即時狀態，
+   把computeAllSignals()的結果(核心4訊號+4個風險提醒)依買/賣方向分類後顯示，
+   讓草案規則文字旁邊能看到「現在實際算出來的訊號是什麼」，兩者互相對照參考。
+*/
+function signalStatusHtml(signals, emptyText){
+  const relevant = signals.filter(s=>s.tier==='full'||s.tier==='near');
+  if(!relevant.length) return `<span style="color:var(--sub);">${emptyText}</span>`;
+  return relevant.map(s=>{
+    if(s.tier==='full') return `<span class="sig-inline full">${s.emoji} ${s.name}已觸發（${s.judgment}）</span>`;
+    return `<span class="sig-inline near">${s.emoji} ${s.name}接近成立（${s.met}/${s.total}）</span>`;
+  }).join('　');
+}
+function renderAdviceSignalSummary(allSignals){
+  const active = allSignals.filter(s=>s.tier==='full'||s.tier==='near');
+  if(!active.length) return '<li style="color:var(--sub)">目前AI進出場引擎與風險提醒訊號皆未觸發、也未接近成立。</li>';
+  return active.map(s=>{
+    const stateTxt = s.tier==='full' ? '已觸發' : `接近成立（${s.met}/${s.total}）`;
+    const catTxt = s.category==='core' ? 'AI進出場引擎' : '風險提醒';
+    return `<li>${s.emoji} [${catTxt}] ${s.name}${stateTxt}：判斷「${s.judgment}」，操作參考「${s.action}」</li>`;
+  }).join('');
+}
+
+/* ---------- 2026-08-24再新增：AI技術面判斷「總結卡」----------
+   使用者參考了兩張截圖，希望「投資建議」/「AI訊號摘要」不要只是條列訊號原始狀態，
+   而是要有一個直接的總結：目前整體是ENTRY/WATCH/EXIT哪一種、根據哪些具體條件(看多/
+   看空因素)、以及「差一點就會觸發」的下一個關鍵點在哪裡。這裡把computeAllSignals()
+   的結果做二次加工：
+   - computeVerdict()：決定整體燈號，判斷優先順序是「有出場/風險訊號正式成立」>
+     「有進場訊號正式成立」>「有訊號接近成立或警示成立」>「都沒有」。優先看空風險
+     是刻意的(寧可保守，不要漏掉風險訊號)。
+   - extractFactors()：把各訊號底下「已經成立」的個別條件(不是整個訊號本身)攤平成
+     看多/看空因素清單，每條後面標註是哪個訊號的條件，這樣即使訊號整體還沒觸發，
+     使用者也能看到目前哪些子條件已經成立。
+   - extractNextTriggers()：只列tier==='near'(只差一項)的訊號，把還沒成立的條件
+     組成「若...→...」的句子，對應圖1的「下一個關鍵觸發」。
+*/
+function computeVerdict(allSignals){
+  const coreSellFull = allSignals.some(s=>s.category==='core' && s.direction==='sell' && s.tier==='full');
+  const warnSellFull = allSignals.some(s=>s.category==='warning' && s.direction==='sell' && s.tier==='full');
+  const coreBuyFull = allSignals.some(s=>s.category==='core' && s.direction==='buy' && s.tier==='full');
+  const warnCautionFull = allSignals.some(s=>s.direction==='caution' && s.tier==='full');
+  const anyNear = allSignals.some(s=>s.tier==='near');
+
+  if(coreSellFull || warnSellFull){
+    return {level:'exit', emoji:'🔴', label:'EXIT／需要防守', hint:'目前有出場方向的訊號已經成立，建議留意風險，評估是否減碼或啟動停利停損。'};
+  }
+  if(coreBuyFull){
+    return {level:'entry', emoji:'🟢', label:'ENTRY／可以進場', hint:'目前有進場方向的訊號已經成立，可依你自己的資金配置紀律考慮分批進場，不建議一次重壓。'};
+  }
+  if(warnCautionFull || anyNear){
+    return {level:'watch', emoji:'🟡', label:'HOLD／WATCH（觀察）', hint:'目前沒有訊號正式成立，但已經出現警示或接近成立的訊號，建議持續觀察、不用急著進出場。'};
+  }
+  return {level:'neutral', emoji:'⚪', label:'中性／無明顯訊號', hint:'目前技術面沒有明顯的進出場或風險訊號，維持現有部位、按原計畫執行即可。'};
+}
+function extractFactors(allSignals, directions){
+  const out=[];
+  allSignals.filter(s=>directions.includes(s.direction)).forEach(s=>{
+    s.conditions.filter(c=>c.met).forEach(c=>{ out.push(`${c.label}（${s.name}）`); });
+  });
+  return out;
+}
+function extractNextTriggers(allSignals){
+  return allSignals.filter(s=>s.tier==='near').map(s=>{
+    const missing = s.conditions.filter(c=>!c.met).map(c=>c.label).join(' ＋ ');
+    return {direction:s.direction, emoji:s.emoji, text:`若${missing} → ${s.judgment}`};
+  });
+}
+function renderAiVerdictCard(allSignals){
+  const v = computeVerdict(allSignals);
+  const bull = extractFactors(allSignals, ['buy']);
+  const bear = extractFactors(allSignals, ['sell','caution']);
+  const nextTrig = extractNextTriggers(allSignals);
+
+  const bullHtml = bull.length ? `<ul class="factor-list bull">${bull.map(f=>`<li>${f}</li>`).join('')}</ul>` : '<div class="factor-empty">目前無看多因素成立</div>';
+  const bearHtml = bear.length ? `<ul class="factor-list bear">${bear.map(f=>`<li>${f}</li>`).join('')}</ul>` : '<div class="factor-empty">目前無看空／警戒因素成立</div>';
+  const nextHtml = nextTrig.length
+    ? nextTrig.map(n=>`<div class="next-trig ${n.direction}">${n.emoji} ${n.text}</div>`).join('<div class="next-trig-or">或</div>')
+    : '<div class="factor-empty">目前沒有接近成立(只差一項)的訊號</div>';
+
+  return `
+  <div class="ai-verdict-card">
+    <div class="ai-verdict-title">🤖 AI技術面判斷</div>
+    <div class="ai-verdict-badge ${v.level}">目前：${v.emoji} ${v.label}</div>
+    <div class="ai-verdict-hint">${v.hint}（僅供參考、不構成投資建議）</div>
+    <div class="factor-section-title">看多因素</div>
+    ${bullHtml}
+    <div class="factor-section-title">看空／警戒因素</div>
+    ${bearHtml}
+    <div class="factor-section-title">下一個關鍵觸發（只差一項條件）</div>
+    ${nextHtml}
+  </div>`;
+}
+
+/* ---------- 2026-08-24再新增：Investment Signal Score（0-100加權評分）----------
+   這是跟上面「AI技術面判斷」(ENTRY/WATCH/EXIT，來自4+4訊號矩陣的AND邏輯)不同的
+   第三套邏輯：不是「條件是否成立」，而是把常見技術指標拆成5大類、每類給固定權重，
+   算出一個連續分數(0-100)，滿分規則是使用者指定的：
+     趨勢30分(價格>EMA20:+10／EMA20>EMA60:+10／價格>EMA60:+10)
+     動能25分(DIF>DEA:+10／Histogram>0:+5／Histogram連續增加:+5／RSI>50:+5)
+     超買超賣20分(RSI 40~60:+5／KD金叉:+5／KD<30後反轉:+10)
+     支撐壓力15分(EMA20附近支撐:+5／EMA60附近支撐:+5／20日低點附近:+5)
+     市場環境10分——這一項目前沒有獨立的「大盤風險/市場Regime」資料源(跟先前討論
+     過、還沒做的「融資維持率」警示是同一件事)，所以先誠實給固定5分(中性)，不假裝
+     算得出來；等之後真的接上大盤風險指標，這裡才會變成動態分數。
+   這套分數是「連續分數+對照表」，跟上面「AI技術面判斷」是「離散AND邏輯」互為補充，
+   兩者可能不完全一致(例如分數中性、但某個訊號剛好AND全部成立)，是正常的，因為
+   衡量的東西本來就不同，不是bug。
+*/
+function computeSignalScore(t){
+  if(t.insufficient || !t.closes || t.closes.length===0) return null;
+  const n=t.closes.length, i=n-1, y=n-2, has2=n>=2;
+  const closes=t.closes, rsiArr=t.rsiArr;
+  const emaNow=t.ema20[i], ema60Now=t.ema60[i];
+  const closeNow=closes[i];
+  const difNow=t.macd.dif[i], deaNow=t.macd.dea[i], oscNow=t.macd.osc[i];
+  const rsiNow=rsiArr[i];
+  const kNow=t.kd.k[i], dNow=t.kd.d[i], kYest=has2?t.kd.k[y]:null, dYest=has2?t.kd.d[y]:null;
+  const l20Now=t.l20[i];
+
+  // 趨勢 30分
+  let trend=0;
+  if(closeNow!=null && emaNow!=null && closeNow>emaNow) trend+=10;
+  if(emaNow!=null && ema60Now!=null && emaNow>ema60Now) trend+=10;
+  if(closeNow!=null && ema60Now!=null && closeNow>ema60Now) trend+=10;
+
+  // 動能 25分
+  let momentum=0;
+  if(difNow!=null && deaNow!=null && difNow>deaNow) momentum+=10;
+  if(oscNow!=null && oscNow>0) momentum+=5;
+  if(n>=3 && t.macd.osc[i]!=null && t.macd.osc[i-1]!=null && t.macd.osc[i-2]!=null && t.macd.osc[i]>t.macd.osc[i-1] && t.macd.osc[i-1]>t.macd.osc[i-2]) momentum+=5;
+  if(rsiNow!=null && rsiNow>50) momentum+=5;
+
+  // 超買超賣 20分
+  let obo=0;
+  if(rsiNow!=null && rsiNow>=40 && rsiNow<=60) obo+=5;
+  if(has2 && kNow!=null && dNow!=null && kYest!=null && dYest!=null && kYest<=dYest && kNow>dNow) obo+=5;
+  if(has2 && kNow!=null && kYest!=null){
+    const win = Math.min(5, n);
+    let wasLow=false;
+    for(let j=Math.max(0,i-win+1); j<=i; j++){ if(t.kd.k[j]!=null && t.kd.k[j]<30){ wasLow=true; break; } }
+    if(wasLow && kNow>kYest) obo+=10;
+  }
+
+  // 支撐/壓力 15分
+  let sr=0;
+  if(closeNow!=null && emaNow!=null && closeNow>=emaNow*0.98 && closeNow<=emaNow*1.02) sr+=5;
+  if(closeNow!=null && ema60Now!=null && closeNow>=ema60Now*0.98 && closeNow<=ema60Now*1.02) sr+=5;
+  if(closeNow!=null && l20Now!=null && closeNow<=l20Now*1.03) sr+=5;
+
+  // 市場環境 10分（暫無獨立大盤風險資料源，固定中性5分，詳見上方註解）
+  const risk=5;
+
+  const total = trend+momentum+obo+sr+risk;
+  return {
+    total,
+    tier: scoreTierOf(total),
+    breakdown: [
+      {name:'趨勢', score:trend, max:30},
+      {name:'動能', score:momentum, max:25},
+      {name:'超買超賣', score:obo, max:20},
+      {name:'支撐/壓力', score:sr, max:15},
+      {name:'市場環境', score:risk, max:10, note:'暫無獨立大盤風險資料源(跟先前討論過、還沒做的融資維持率警示是同一件事)，先固定給中性5分，不是動態算出來的。'},
+    ],
+  };
+}
+function scoreTierOf(total){
+  let level = total>=70 ? 'entry' : (total>=50 ? 'watch' : 'exit');
+  if(total>=90) return {level, emoji:'🟢', label:'強力買進', action:'可積極加碼'};
+  if(total>=80) return {level, emoji:'🟢', label:'買進', action:'正常加碼'};
+  if(total>=70) return {level, emoji:'🟢', label:'偏多', action:'持有／小幅加碼'};
+  if(total>=60) return {level, emoji:'🟡', label:'中性偏多', action:'持有'};
+  if(total>=50) return {level, emoji:'🟡', label:'中性', action:'等待'};
+  if(total>=40) return {level, emoji:'🟠', label:'偏弱', action:'減碼觀察'};
+  if(total>=30) return {level, emoji:'🔴', label:'弱勢', action:'減碼'};
+  return {level, emoji:'🔴', label:'強烈防守', action:'大幅降低曝險'};
+}
+function renderSignalScoreCard(t){
+  const s = computeSignalScore(t);
+  if(!s){
+    return '<div class="ai-score-card"><div class="ai-verdict-title">🎯 Investment Signal Score</div><div class="score-empty">資料不足，至少需要3個交易日資料才能計算(動能類別的「Histogram連續增加」需要比對3天)。</div></div>';
+  }
+  const rows = s.breakdown.map(b=>`
+    <div class="score-row"><span class="score-cat">${b.name}</span><span class="score-bar-wrap"><span class="score-bar" style="width:${(b.score/b.max*100).toFixed(0)}%"></span></span><span class="score-val">+${b.score}/${b.max}</span></div>
+    ${b.note?`<div class="score-note">${b.note}</div>`:''}`).join('');
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">🎯 Investment Signal Score</div>
+    <div class="score-total-row">
+      <span class="score-total-num">${s.total}<span class="score-total-max">/100</span></span>
+      <span class="ai-verdict-badge ${s.tier.level}">${s.tier.emoji} ${s.tier.label}</span>
+    </div>
+    <div class="score-action">建議：${s.tier.action}（僅供參考、不構成投資建議）</div>
+    <div class="score-breakdown">${rows}</div>
+  </div>`;
+}
+
 function renderOverview(list){
   const body = document.getElementById('sum-t0');
   body.innerHTML = list.map(t=>{
@@ -783,6 +1326,8 @@ function renderOverview(list){
     const trigs = t.insufficient ? [] : computeTriggers(t);
     const trig = trigs.length>0 ? `<span class="down">${trigs.join('、')}</span>` : '<span style="color:#9aa0a8">無</span>';
     const extra = t.insufficient ? [['--','--'],['--','--']] : overviewExtraCols(t);
+    const aiSig = t.insufficient ? '<span style="color:#9aa0a8">--</span>' : overviewSignalBadges(t);
+    const scoreBadge = t.insufficient ? '<span style="color:#9aa0a8">--</span>' : overviewScoreBadge(t);
     return `<tr>
       <td class="nowrap"><span class="cat-badge ${CATCLASS[cfg.tab]}">${CATLABEL[cfg.tab]}</span></td>
       <td class="nowrap">${cfg.symbol}</td>
@@ -791,6 +1336,8 @@ function renderOverview(list){
       <td class="nowrap">${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td class="nowrap">${t.insufficient?'--':fmt(t.rsi,1)}</td>
       <td class="nowrap">${trig}</td>
+      <td class="nowrap">${aiSig}</td>
+      <td class="nowrap">${scoreBadge}</td>
       <td class="nowrap"><span style="color:var(--sub);font-size:11px;">${extra[0][0]}</span><br>${extra[0][1]}</td>
       <td class="nowrap"><span style="color:var(--sub);font-size:11px;">${extra[1][0]}</span><br>${extra[1][1]}</td>
       <td class="nowrap"><button class="detail-btn" onclick="goToDetail('${cfg.tab}','${cfg.symbol}')">詳情</button></td>
@@ -838,10 +1385,14 @@ function renderTab(tab, list){
     const trigs = t.insufficient ? [] : computeTriggers(t);
     const trig = trigs.length>0 ? `<span class="down">${trigs.join('、')}</span>` : '無';
     const extra = t.insufficient ? ['--','--'] : tabExtraCols(t, tab);
+    const aiSig = t.insufficient ? '--' : overviewSignalBadges(t);
+    const scoreBadge = t.insufficient ? '--' : overviewScoreBadge(t);
     return `<tr>
       <td>${t.cfg.symbol}</td><td>${t.cfg.name}${t.cfg.flag?`<span class="flag">${t.cfg.flag}</span>`:''}</td>
       <td>${t.insufficient?'資料累積中':priceFmt(t)}</td><td>${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td>${t.insufficient?'--':fmt(t.rsi,1)}</td><td>${trig}</td>
+      <td>${aiSig}</td>
+      <td>${scoreBadge}</td>
       <td>${extra[0]}</td><td>${extra[1]}</td>
     </tr>`;
   }).join('');
@@ -860,8 +1411,12 @@ function renderStockSection(t, tab){
   }
   const trigs = computeTriggers(t);
   const dynFields = dynamicCatFields(t, tab);
-  const allFields = dynFields.concat(cfg.staticFields.map(([l,v])=>[l,v,true]));
-  const catRows = allFields.map(([l,v,manual])=>`<div><span class="lbl">${l}</span><span class="val${manual?' manual':''}">${v}</span></div>`).join('');
+  const staticFields = cfg.staticFields || [];
+  // allFields只用來給下面股票標頭那行「快速標籤」抽樣用，主畫面的cat-grid只放dynFields(即時資料)，
+  // staticFields(手動維護、低頻更新的欄位)另外收合到一個<details>區塊，避免使用者誤以為兩者更新頻率一樣。
+  const allFields = dynFields.concat(staticFields.map(([l,v])=>[l,v,true]));
+  const catRows = dynFields.map(([l,v])=>`<div><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join('');
+  const staticRows = staticFields.map(([l,v])=>`<div><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join('');
   const adviceItems = cfg.advice(t).map(li=>`<li>${li}</li>`).join('');
 
   let deepHtml='';
@@ -936,6 +1491,7 @@ function renderStockSection(t, tab){
   }
 
   const triggered = trigs.length>0;
+  const allSignalsForBoxes = computeAllSignals(t); // 給進場/出場草案框+投資建議區塊的AI訊號摘要共用，避免重複算兩次
   const isUSD = t.cfg.currency==='USD';
   return `
   <div class="stock-section" id="${cfg.symbol}_${tab}">
@@ -958,11 +1514,25 @@ function renderStockSection(t, tab){
 
     <div class="cat-grid">${catRows}</div>
 
+    <details class="static-details">
+      <summary>基本資料（不常變動，手動維護）<span class="cnt">共${staticFields.length}項</span></summary>
+      ${staticFields.length ? `<div class="static-grid">${staticRows}</div>` : `<div class="static-empty">這檔標的目前沒有額外的手動維護欄位。</div>`}
+    </details>
+
     <div class="trig-line">${triggered?`<b class="on">${trigs.join('、')}</b>`:'本日無觸發'}</div>
     <div class="trigger-pair">
-      <div class="trigger-box entry"><span class="tt">🟢 進場觸發條件（草案）</span>${cfg.entryRule}</div>
-      <div class="trigger-box exit"><span class="tt">🔴 出場觸發條件（草案）</span>${cfg.exitRule}</div>
+      <div class="trigger-box entry">
+        <span class="tt">🟢 進場觸發條件（草案）</span>${cfg.entryRule}
+        <div class="trigger-live">🤖 目前AI訊號：${signalStatusHtml(allSignalsForBoxes.filter(s=>s.direction==='buy'), '目前無買進方向訊號')}</div>
+      </div>
+      <div class="trigger-box exit">
+        <span class="tt">🔴 出場觸發條件（草案）</span>${cfg.exitRule}
+        <div class="trigger-live">🤖 目前AI訊號：${signalStatusHtml(allSignalsForBoxes.filter(s=>s.direction==='sell'||s.direction==='caution'), '目前無出場/風險方向訊號')}</div>
+      </div>
     </div>
+
+    <h4 style="margin:18px 0 6px;font-size:13.5px;">🤖 AI進出場引擎（第一代，4訊號矩陣）</h4>
+    ${renderSignalMatrix(t)}
 
     <div class="chart-block"><div class="chart-title">價格 + EMA20 / EMA60 + 前20日高低</div><canvas id="price_${cfg.symbol}_${tab}" height="120"></canvas></div>
     <div class="chart-block"><div class="chart-title">RSI(14)（Wilder 平滑，虛線為 70/30）</div><canvas id="rsi_${cfg.symbol}_${tab}" height="80"></canvas></div>
@@ -975,6 +1545,12 @@ function renderStockSection(t, tab){
     <div class="advice">
       <div class="advice-title">投資建議（結合真實資料的技術面/籌碼面/估值面，僅供參考，非投資建議）</div>
       <ul>${adviceItems}</ul>
+      <div class="advice-title" style="margin-top:12px;">🤖 AI訊號摘要（進出場引擎＋風險提醒，即時計算，非投資建議）</div>
+      ${renderSignalScoreCard(t)}
+      <div class="score-note" style="margin:-6px 0 10px 0;">↑ 這是連續分數評分模型（5大類加權），跟下面「AI技術面判斷」（4+4訊號矩陣的條件式判斷）是兩套獨立邏輯，衡量角度不同，數字/燈號不完全一致是正常的，建議互相參考、不要只看單一數字。</div>
+      ${renderAiVerdictCard(allSignalsForBoxes)}
+      <div class="factor-section-title">目前成立／接近成立的訊號明細</div>
+      <ul>${renderAdviceSignalSummary(allSignalsForBoxes)}</ul>
     </div>
   </div>`;
 }
@@ -1001,6 +1577,42 @@ function dynamicCatFields(t, tab){
   return out;
 }
 
+/* ---------- 4張圖表(價格/RSI/MACD/KD)的X軸十字準星同步 ----------
+   Chart.js本身每張圖各自處理hover/tooltip，彼此不知道對方的存在。這裡用最基本的
+   做法：4張圖共用同一份dates(日期)陣列、索引完全對齊，所以只要在任一張圖上算出
+   目前滑鼠對到的資料索引(idx)，就可以直接套用到其他3張圖，手動呼叫setActiveElements
+   +tooltip.setActiveElements+update()，讓4張圖同時顯示同一天的十字準星/tooltip。
+   離開畫布時(mouseleave)則把4張圖的active狀態都清空，避免殘留上一次的準星。
+*/
+function syncChartsCrosshair(charts){
+  charts.forEach(chart=>{
+    const handler = (evt)=>{
+      const points = chart.getElementsAtEventForMode(evt, 'index', {intersect:false}, false);
+      if(!points || !points.length) return;
+      const idx = points[0].index;
+      charts.forEach(c=>{
+        const active = c.data.datasets
+          .map((ds,dsIndex)=>({datasetIndex:dsIndex, index:idx}))
+          .filter(p=>c.data.datasets[p.datasetIndex].data[p.index]!=null);
+        c.tooltip.setActiveElements(active, {x:evt.x!=null?evt.x:0, y:0});
+        c.setActiveElements(active);
+        c.update('none'); // 'none'=不要動畫，避免十字準星移動時整張圖閃爍
+      });
+    };
+    const clear = ()=>{
+      charts.forEach(c=>{
+        c.tooltip.setActiveElements([], {x:0,y:0});
+        c.setActiveElements([]);
+        c.update('none');
+      });
+    };
+    chart.canvas.addEventListener('mousemove', handler);
+    chart.canvas.addEventListener('mouseleave', clear);
+    chart.canvas.addEventListener('touchmove', handler, {passive:true});
+    chart.canvas.addEventListener('touchend', clear);
+  });
+}
+
 function buildCharts(t, tab){
   const id = `${t.cfg.symbol}_${tab}`;
   const dates = t.dates;
@@ -1008,7 +1620,7 @@ function buildCharts(t, tab){
     plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10}}}},
     scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{display:false}}}};
 
-  new Chart(document.getElementById('price_'+id), {
+  const priceChart = new Chart(document.getElementById('price_'+id), {
     type:'line',
     data:{labels:dates, datasets:[
       {label:'收盤',data:t.closes,borderColor:'#1f2328',borderWidth:1.6,pointRadius:0},
@@ -1021,7 +1633,7 @@ function buildCharts(t, tab){
   });
 
   const rsi70=dates.map(()=>70), rsi30=dates.map(()=>30);
-  new Chart(document.getElementById('rsi_'+id), {
+  const rsiChart = new Chart(document.getElementById('rsi_'+id), {
     type:'line',
     data:{labels:dates, datasets:[
       {label:'RSI(14)',data:t.rsiArr,borderColor:'#2b7fd9',borderWidth:1.4,pointRadius:0},
@@ -1031,7 +1643,7 @@ function buildCharts(t, tab){
     options:{...common, scales:{...common.scales, y:{min:0,max:100,ticks:{font:{size:9}}}}}
   });
 
-  new Chart(document.getElementById('macd_'+id), {
+  const macdChart = new Chart(document.getElementById('macd_'+id), {
     type:'bar',
     data:{labels:dates, datasets:[
       {type:'bar',label:'柱狀體',data:t.macd.osc,backgroundColor:t.macd.osc.map(v=>v>=0?'#d9363e':'#1e9e5a'),borderWidth:0},
@@ -1042,7 +1654,7 @@ function buildCharts(t, tab){
   });
 
   const kd80=dates.map(()=>80), kd20=dates.map(()=>20);
-  new Chart(document.getElementById('kd_'+id), {
+  const kdChart = new Chart(document.getElementById('kd_'+id), {
     type:'line',
     data:{labels:dates, datasets:[
       {label:'K',data:t.kd.k,borderColor:'#0aa89e',borderWidth:1.4,pointRadius:0},
@@ -1052,6 +1664,8 @@ function buildCharts(t, tab){
     ]},
     options:{...common, scales:{...common.scales, y:{min:0,max:100,ticks:{font:{size:9}}}}}
   });
+
+  syncChartsCrosshair([priceChart, rsiChart, macdChart, kdChart]);
 }
 
 function calcPE(symbol){
