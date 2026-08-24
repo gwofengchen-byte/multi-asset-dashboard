@@ -247,6 +247,7 @@
       <button class="tab-btn" data-tab="t1">①指數型ETF</button>
       <button class="tab-btn" data-tab="t2">②高股息ETF</button>
       <button class="tab-btn" data-tab="t3">③金融股</button>
+      <button class="tab-btn" data-tab="t7">④債券型ETF</button>
       <span class="nav-divider">衛星</span>
       <button class="tab-btn" data-tab="t4">①個股型</button>
       <button class="tab-btn" data-tab="t5">②海外ETF型</button>
@@ -275,6 +276,12 @@
 
   <div class="tab-panel active" id="t0">
     <p class="panel-desc">全部 15 檔標的一覽，不含圖表——先看這頁抓重點，需要細節再點「詳情」跳到對應分類頁。「本日觸發」欄位是根據真實資料算出的訊號(技術面EMA20穿越、估值面PE百分位、籌碼面外資連續買賣超)，跟你Discord收到的通知邏輯一致。最右側兩欄依各分類顯示較有用的重點指標(折溢價/填息天數/三大法人/PE百分位/海外對標等)；進場／出場條件草案請到各分類頁詳情查看。</p>
+
+    <h4 style="margin:4px 0 6px;font-size:13.5px;">📊 大盤參考：台股加權指數(TAIEX)</h4>
+    <p class="panel-desc" style="margin-top:0;">這不是你的持股，純粹當市場大環境參考，不計入下面的核心/衛星配置，也不會出現在下方的持股總覽表格列。資料來源是yfinance的「^TWII」，跟NVDA/GOOG用同一套已驗證過的抓取流程；技術面指標(EMA/RSI/MACD/KD)、AI訊號、Investment Signal Score都跟個股/ETF用同一套計算邏輯，但下方的「進場/出場觸發條件」文字是通用草案，不是針對大盤特別設計的紀律，僅供參考。</p>
+    <div id="detail-index"></div>
+
+    <h4 style="margin:20px 0 6px;font-size:13.5px;">📋 持股總覽</h4>
     <div class="table-scroll">
     <table class="summary">
       <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
@@ -302,6 +309,13 @@
     <div class="jumpnav" id="jump-t3"></div>
     <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>三大法人(近日)</th><th>NIM</th></tr></thead><tbody id="sum-t3"></tbody></table>
     <div id="detail-t3"></div>
+  </div>
+
+  <div class="tab-panel" id="t7">
+    <p class="panel-desc">核心部位(4)：債券型ETF——都是台股上市、美元計價的美國公債／投資級公司債ETF，回答「利率環境有沒有變、存續期間曝險是否過大」，不是「今天要不要買賣」。技術面、折溢價、填息天數為真實資料；存續期間、信用評級等欄位目前沒有自動化資料源，先留空或手動維護。這4檔的「進場/出場」邏輯本質上是看利率循環，跟股票型ETF的技術面邏輯不完全對等，草案規則僅供參考。</p>
+    <div class="jumpnav" id="jump-t7"></div>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t7"></tbody></table>
+    <div id="detail-t7"></div>
   </div>
 
   <div class="tab-panel" id="t4">
@@ -445,8 +459,8 @@ function freshnessStatus(latestDateStr, now){
   return {level:'warn', label:`${latestDateStr}（比預期落後，建議檢查Windows工作排程器是否正常執行）`};
 }
 
-const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型'};
-const CATCLASS = {t1:'core', t2:'core', t3:'core', t4:'sat', t5:'sat', t6:'sat'};
+const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t7:'核心(4) 債券型ETF', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型'};
+const CATCLASS = {t1:'core', t2:'core', t3:'core', t7:'core', t4:'sat', t5:'sat', t6:'sat'};
 
 /* ---------- 標的設定：只保留「沒有自動化資料源」的手動維護內容 ---------- */
 const TICKERS = [
@@ -553,6 +567,67 @@ const TICKERS = [
    `基本面欄位待補`
  ]},
 
+{tab:'t7',symbol:'00687B',name:'國泰20年美債',
+ staticFields:[
+   ['追蹤指數','Bloomberg U.S. Treasury 20+ Year Index（手動維護，2026-08查證）'],
+   ['存續期間','待補（長天期公債，存續期間長，對利率變動非常敏感，手動維護）'],
+   ['信用品質','美國公債，主權信用等級（手動維護）'],
+ ],
+ entryRule:'折溢價<-0.3%，或市場升息預期降溫、美債殖利率明顯回落時分批布局（草案，需你自行確認）',
+ exitRule:'折溢價>+0.5%不追買；若10年期美債殖利率持續上行、升息預期升溫，留意淨值下跌風險（非賣出訊號，草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `長天期美國公債ETF，存續期間長，淨值對美債殖利率變動的敏感度遠高於短天期債券`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   t.avgFillDays!=null?`最近幾次配息平均填息天數約${t.avgFillDays.toFixed(0)}天`:'填息天數資料尚不足',
+   `台灣債券ETF證交稅目前(2026-12-31前)仍在免稅期間，屬時效性優惠，執行加減碼時可留意時間點`
+ ]},
+{tab:'t7',symbol:'00720B',name:'元大20年+BBB美元公司債',
+ staticFields:[
+   ['追蹤指數','Bloomberg US 20+ Year BBB Corporate Bond Liquid Index（手動維護，2026-08查證）'],
+   ['存續期間','待補（長天期投資級公司債，手動維護）'],
+   ['信用品質','投資級BBB-~BBB+區間為主（手動維護），比公債多一層信用利差風險'],
+ ],
+ entryRule:'折溢價<-0.3%，或信用利差(credit spread)收斂、公司債殖利率回落時分批布局（草案）',
+ exitRule:'折溢價>+0.5%不追買；留意景氣轉弱時信用利差擴大、公司債淨值下跌的風險（非賣出訊號，草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `長天期BBB級美元公司債，同時暴露在「利率風險」跟「信用利差風險」兩層，波動度通常高於同天期公債ETF`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   t.avgFillDays!=null?`最近幾次配息平均填息天數約${t.avgFillDays.toFixed(0)}天`:'填息天數資料尚不足',
+   `跟00687B同屬長天期部位，若兩檔都持有，實質存續期間曝險會疊加，建議一併檢視`
+ ]},
+{tab:'t7',symbol:'00933B',name:'國泰10Y+金融債',
+ staticFields:[
+   ['追蹤指數','待補（10年期以上金融次順位債相關指數，手動維護）'],
+   ['存續期間','待補（10年期以上，中長天期，手動維護）'],
+   ['信用品質','金融機構次順位債為主（手動維護），信用風險高於一般公司債'],
+ ],
+ entryRule:'折溢價<-0.3%，或殖利率位於近期相對高檔時分批布局（草案）',
+ exitRule:'折溢價>+0.5%不追買；留意金融業信用事件或利差急速擴大的風險（非賣出訊號，草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `金融次順位債天期較長、配息率通常較公債/一般投資級公司債高，但信用風險與流動性風險也相對高`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   t.avgFillDays!=null?`最近幾次配息平均填息天數約${t.avgFillDays.toFixed(0)}天`:'填息天數資料尚不足',
+   `建議留意配息率是否明顯高於同天期公債(可能反映較高風險溢酬)，不宜只看配息率高低做決策`
+ ]},
+{tab:'t7',symbol:'00948B',name:'中信優息投資級債',
+ staticFields:[
+   ['追蹤指數','ICE Enhanced Yield 15+ Year Investment Grade Senior US Developed Markets Corporate ESG Screened Index（手動維護，2026-08查證）'],
+   ['存續期間','待補（15年期以上投資級公司債，手動維護）'],
+   ['信用品質','投資級為主，並有ESG篩選（手動維護）'],
+ ],
+ entryRule:'折溢價<-0.3%，或信用利差收斂、公司債殖利率回落時分批布局（草案）',
+ exitRule:'折溢價>+0.5%不追買；留意景氣轉弱時信用利差擴大的風險（非賣出訊號，草案）',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `15年期以上投資級公司債，並有ESG篩選機制，跟00720B同屬長天期投資級公司債，但追蹤指數與成分不同`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   t.avgFillDays!=null?`最近幾次配息平均填息天數約${t.avgFillDays.toFixed(0)}天`:'填息天數資料尚不足',
+   `這檔是2026年內較新掛牌的ETF，歷史資料仍在累積中，部分統計(如PE百分位式的評價模型)不適用於債券ETF`
+ ]},
+
 {tab:'t5',symbol:'00646',name:'元大S&P500',
  staticFields:[['追蹤指數','S&P500（手動維護）'],['匯率避險','未避險（手動維護）']],
  entryRule:'折溢價<-0.5%，或拉回測試EMA60不破',
@@ -637,6 +712,20 @@ const TICKERS = [
    `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20($${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60($${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
    t.institutional && t.institutional.holders.length ? `機構持股資料最新申報季度：${t.institutional.latestReportDate}（前10大都是Blackrock/Vanguard這類指數型資產管理公司，波克夏未在列）` : '機構持股資料尚未取得',
    `這是美國境內資產，若部位持續加大，建議自行了解美國遺產稅規則（NRA免稅額僅6萬美元）`
+ ]},
+
+{tab:'idx',symbol:'^TWII',name:'台股加權指數(TAIEX)',
+ staticFields:[
+   ['性質','大盤參考指數，不是可交易的個股或ETF，也不是持股（手動維護）'],
+   ['資料來源','yfinance「^TWII」，跟NVDA/GOOG共用同一套已驗證抓取流程，2026-08查證可行（手動維護）'],
+ ],
+ entryRule:'（大盤沒有個股式的進出場邏輯，這裡沿用通用技術面草案）站上EMA20/60，且KD/MACD轉強時視為偏多環境',
+ exitRule:'（大盤沒有個股式的進出場邏輯，這裡沿用通用技術面草案）跌破EMA60且MACD死叉時，市場環境偏保守，個股/ETF加碼宜更謹慎',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `這是整體台股市場的參考指標，不是你的持股；技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})`,
+   `可以搭配下方各個核心/衛星持股的技術面一起看，判斷目前是「個股獨立表現」還是「跟著大盤同步」`,
+   `這裡的AI訊號/Investment Signal Score用的是同一套規則式邏輯套用在大盤指數上，不是專門為大盤設計的模型，解讀時要更謹慎`
  ]},
 ];
 const TICKER_MAP = {}; // symbol -> 計算後的 t 物件，calcPE() 要用來拿 peBands
@@ -770,6 +859,18 @@ function computeTicker(cfg, raw){
   if(raw.chipRows && raw.chipRows.length>0){
     t.chipRecent = raw.chipRows;
     t.chipToday = raw.chipRows[0].foreign_net_buy!=null ? Number(raw.chipRows[0].foreign_net_buy) : null;
+    // 三大法人(外資+投信+自營合計)近3日淨買賣超：每個標的都算(不只t3/t4)，
+    // 用來(1)在每檔標的畫面上顯示、(2)餵給下面新增的W5/W6 AI風險提醒訊號。
+    // 個別欄位缺值當0處理(例如自營商某天沒有資料)，避免單一缺值讓整個加總變成null。
+    if(raw.chipRows.length>=3){
+      const last3 = raw.chipRows.slice(0,3);
+      const sumField=(f)=>last3.reduce((a,r)=>a+(r[f]!=null?Number(r[f]):0),0);
+      t.chipAgg3 = {
+        total: sumField('foreign_net_buy')+sumField('trust_net_buy')+sumField('dealer_net_buy'),
+        foreign: sumField('foreign_net_buy'), trust: sumField('trust_net_buy'), dealer: sumField('dealer_net_buy'),
+        fromDate: last3[last3.length-1].trade_date, toDate: last3[0].trade_date,
+      };
+    }
   }
 
   // PE百分位（rank + 百分位區間）
@@ -982,6 +1083,23 @@ function computeWarningSignals(t){
     warnings.push({id:'W2', name:'KD高檔死叉', emoji:'🟠', judgment:'動能轉弱', action:'減碼觀察', direction:'caution', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
   }
 
+  // W5/W6 三大法人(外資+投信+自營合計)近3日買賣超：2026-08-24使用者新增需求，
+  // 跟computeTriggers()裡「外資近3日買賣超」不同——那個只算外資，這裡是三大法人合計，
+  // 用t.chipAgg3(在computeTicker()裡算好的，每個TW標的都有，不限t3/t4)。
+  // 單一條件，沒有資料時走unknown()分支，會誠實顯示「資料不足」而不是誤判。
+  {
+    const c1 = t.chipAgg3 ? cond('三大法人近3日合計買超', t.chipAgg3.total>0, `合計淨買超約${Math.abs(Math.round(t.chipAgg3.total/1000)).toLocaleString()}張（${t.chipAgg3.fromDate}~${t.chipAgg3.toDate}）`) : unknown('三大法人近3日合計買超');
+    const conds=[c1];
+    const {met,total,tier} = tierOf(conds);
+    warnings.push({id:'W5', name:'三大法人買超', emoji:'🟢', judgment:'籌碼轉強', action:'可留意加碼時機', direction:'buy', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+  {
+    const c1 = t.chipAgg3 ? cond('三大法人近3日合計賣超', t.chipAgg3.total<0, `合計淨賣超約${Math.abs(Math.round(t.chipAgg3.total/1000)).toLocaleString()}張（${t.chipAgg3.fromDate}~${t.chipAgg3.toDate}）`) : unknown('三大法人近3日合計賣超');
+    const conds=[c1];
+    const {met,total,tier} = tierOf(conds);
+    warnings.push({id:'W6', name:'三大法人賣超', emoji:'🟠', judgment:'籌碼轉弱', action:'留意調節壓力', direction:'caution', category:'warning', conditions:conds, met, total, tier, triggered: tier==='full'});
+  }
+
   // W3/W4 RSI背離：用收盤價算的20日滾動高/低點，找「今天是否創新高/新低」，
   // 再往前找上一次同樣創新高/新低的那一天，比較兩次的RSI有沒有同步創高/創低。
   if(n>=30){
@@ -1039,7 +1157,7 @@ function overviewExtraCols(t){
     const yr = t.ema60v!=null ? (t.price>=t.ema60v?'站上年線':'跌破年線') : '--';
     return [['折溢價',pd],['年線',yr]];
   }
-  if(tab==='t2'){
+  if(tab==='t2'||tab==='t7'){
     const pd = t.premiumDiscount!=null ? `${t.premiumDiscount.toFixed(2)}%` : '--';
     const fd = t.avgFillDays!=null ? `約${t.avgFillDays.toFixed(0)}天` : (t.fillEventsCount?'尚未填息':'--');
     return [['折溢價',pd],['填息天數',fd]];
@@ -1353,7 +1471,7 @@ function tabExtraCols(t, tab){
     const ob = t.overseasBenchmark ? `${t.overseasBenchmark.ticker} $${t.overseasBenchmark.price.toFixed(2)}` : '--';
     return [pd, ob];
   }
-  if(tab==='t2'){
+  if(tab==='t2'||tab==='t7'){
     const pd = t.premiumDiscount!=null ? `${t.premiumDiscount.toFixed(2)}%` : '--';
     const fd = t.avgFillDays!=null ? `約${t.avgFillDays.toFixed(0)}天` : (t.fillEventsCount?'尚未填息':'--');
     return [pd, fd];
@@ -1399,6 +1517,16 @@ function renderTab(tab, list){
 
   detail.innerHTML = list.map(t=>renderStockSection(t, tab)).join('');
   list.forEach(t=>{ if(!t.insufficient) buildCharts(t, tab); });
+}
+
+// 大盤參考指數(^TWII)：不屬於任何t1-t7分類，獨立渲染在總覽頁最上方，
+// 用法跟renderTab()對單一標的做的事完全一樣(renderStockSection+buildCharts)，
+// 只是不經過summary表格/jumpnav這些「一堆標的列表」相關的邏輯。
+function renderIndexSection(t){
+  const box = document.getElementById('detail-index');
+  if(!box) return;
+  box.innerHTML = renderStockSection(t, 'idx');
+  if(!t.insufficient) buildCharts(t, 'idx');
 }
 
 function renderStockSection(t, tab){
@@ -1457,6 +1585,26 @@ function renderStockSection(t, tab){
         <table class="mini"><thead><tr><th>機構</th><th>目標價</th><th>日期</th></tr></thead><tbody>${anaRows}</tbody></table>
         <div class="rule-box">📌 詳細進出場紀律：${cfg.rule}</div>
         <div class="quota-box">🛰 衛星額度佔用：${cfg.satelliteQuota}（與其他衛星標的共用同一個10%總上限）</div>
+      </div>`;
+  }
+
+  // 三大法人近3日買賣超明細：所有有籌碼資料的標的都顯示(不限cfg.deepDive)，
+  // 2026-08-24使用者新增需求。deepDive標的(台積電/崇越)在上面deepHtml已經有更完整的
+  // 籌碼表格(含外資持股比例)，這裡就不重複顯示，避免同一頁出現兩張籌碼表。
+  let chipHtml='';
+  if(!cfg.deepDive && t.chipRecent && t.chipRecent.length>0){
+    const fmtLot=(v)=>v==null?'--':`${v>=0?'+':''}${Math.round(v/1000).toLocaleString()}張`;
+    const rows3 = t.chipRecent.slice(0,3).map(r=>
+      `<tr><td>${r.trade_date}</td><td>外資 ${fmtLot(r.foreign_net_buy)}</td><td>投信 ${fmtLot(r.trust_net_buy)}</td><td>自營 ${fmtLot(r.dealer_net_buy)}</td></tr>`
+    ).join('');
+    const aggLine = t.chipAgg3
+      ? `<div class="note-box">近3日（${t.chipAgg3.fromDate}~${t.chipAgg3.toDate}）三大法人合計：<b>${t.chipAgg3.total>=0?'買超':'賣超'}約${Math.abs(Math.round(t.chipAgg3.total/1000)).toLocaleString()}張</b>（外資${fmtLot(t.chipAgg3.foreign)}／投信${fmtLot(t.chipAgg3.trust)}／自營${fmtLot(t.chipAgg3.dealer)}）</div>`
+      : '';
+    chipHtml = `
+      <div class="deep">
+        <h4>三大法人買賣超（近3日，真實資料）</h4>
+        <table class="mini"><thead><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th></tr></thead><tbody>${rows3}</tbody></table>
+        ${aggLine}
       </div>`;
   }
 
@@ -1540,6 +1688,7 @@ function renderStockSection(t, tab){
     <div class="chart-block"><div class="chart-title">KD(9,3,3) 日（虛線為 80/20）</div><canvas id="kd_${cfg.symbol}_${tab}" height="80"></canvas></div>
 
     ${deepHtml}
+    ${chipHtml}
     ${instHtml}
 
     <div class="advice">
@@ -1558,10 +1707,17 @@ function renderStockSection(t, tab){
 function dynamicCatFields(t, tab){
   // 每個分類頁面「有真實資料源」的欄位，排在staticFields前面
   const out=[];
-  if(tab==='t1'||tab==='t2'||tab==='t5'){
+  // 三大法人(外資+投信+自營合計)近3日買賣超：不分類別，只要有籌碼資料的標的都顯示，
+  // 跟原本只在t3/t4顯示的「三大法人(近日，僅外資)」欄位分開放，涵蓋範圍更廣。
+  if(t.chipAgg3){
+    const fmtSigned=(v)=>`${v>=0?'+':''}${Math.round(v/1000).toLocaleString()}張`;
+    const dir = t.chipAgg3.total>=0 ? '買超' : '賣超';
+    out.push(['三大法人(近3日合計)', `${dir} ${Math.abs(Math.round(t.chipAgg3.total/1000)).toLocaleString()}張（外資${fmtSigned(t.chipAgg3.foreign)}／投信${fmtSigned(t.chipAgg3.trust)}／自營${fmtSigned(t.chipAgg3.dealer)}，${t.chipAgg3.fromDate}~${t.chipAgg3.toDate}）`]);
+  }
+  if(tab==='t1'||tab==='t2'||tab==='t5'||tab==='t7'){
     out.push(['折溢價', t.premiumDiscount!=null?`${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'資料尚未取得']);
   }
-  if(tab==='t2'){
+  if(tab==='t2'||tab==='t7'){
     out.push(['平均填息天數', t.avgFillDays!=null?`約${t.avgFillDays.toFixed(0)}天（近${t.fillEventsCount}次除息，${t.stillFillingCount}次尚未填息）`:(t.fillEventsCount?'近期除息尚未填息':'資料尚未取得')]);
   }
   if(tab==='t3'||tab==='t4'){
@@ -1722,10 +1878,17 @@ async function initApp(){
       TICKER_MAP[cfg.symbol]=t;
       return t;
     }));
-    const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[]};
-    results.forEach(t=>groups[t.cfg.tab].push(t));
-    renderOverview(results);
+    // ^TWII(大盤加權指數，tab:'idx')不是持股，不進summary表格、不進t1-t7的分類群組，
+    // 另外獨立渲染成一個完整標的區塊放在總覽頁最上方；但下面的資料日期核對機制仍會
+    // 用到它(它也是真實的TW交易日資料，可以當TW資料新鮮度的其中一個參考點)，
+    // 所以只在「分表格/分頁籤」這一步驟排除它，不是整個從results拿掉。
+    const indexTicker = results.find(t=>t.cfg.tab==='idx');
+    const portfolioResults = results.filter(t=>t.cfg.tab!=='idx');
+    const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[],t7:[]};
+    portfolioResults.forEach(t=>groups[t.cfg.tab].push(t));
+    renderOverview(portfolioResults);
     Object.keys(groups).forEach(tab=>renderTab(tab, groups[tab]));
+    if(indexTicker) renderIndexSection(indexTicker);
 
     // 資料日期核對機制：台股/美股分開判斷(美股本來就跟台股有時區落差，不能用同一套邏輯比對)
     const now = new Date();
