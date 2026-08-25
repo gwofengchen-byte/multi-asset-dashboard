@@ -252,6 +252,7 @@
       <button class="tab-btn" data-tab="t4">①個股型</button>
       <button class="tab-btn" data-tab="t5">②海外ETF型</button>
       <button class="tab-btn" data-tab="t6">③海外個股型</button>
+      <button class="tab-btn" data-tab="t8">④趨勢成長股</button>
     </div>
     <a href="#" id="settings-link" class="settings-link-top">⚙ 設定</a>
   </div>
@@ -270,7 +271,7 @@
       <div class="alloc-track"><div class="alloc-fill sat over" style="width:100%"></div></div>
       <div class="alloc-val">13.0% ／ 上限 10%</div>
     </div>
-    <div class="alloc-warn">⚠ 衛星部位已超過 10% 上限（示意情境，非即時計算）。建議：暫停對 Tab4／Tab5 加碼，待核心比重回升或衛星部位依既定紀律減碼後再評估新增部位。</div>
+    <div class="alloc-warn">⚠ 衛星部位已超過 10% 上限（示意情境，非即時計算）。建議：暫停對 Tab4／Tab5／Tab8 加碼，待核心比重回升或衛星部位依既定紀律減碼後再評估新增部位。</div>
     <div class="alloc-editnote">這兩個百分比目前是你手動輸入的示意數字，資料庫裡沒有你實際持股股數，沒辦法自動換算真正的配置比重——如果想做成即時計算，需要你另外提供實際持股數量。</div>
   </div>
 
@@ -337,6 +338,13 @@
     <div class="jumpnav" id="jump-t6"></div>
     <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
     <div id="detail-t6"></div>
+  </div>
+
+  <div class="tab-panel" id="t8">
+    <p class="panel-desc">衛星持股(4)：趨勢成長股——2344(華邦電)、2404(漢唐)、2317(鴻海)三檔台股個股，跟衛星(1)個股型(2330/5434)性質相同，都是走完整的個股深度分析(技術面/籌碼面/財報面/現金流量表/PE歷史百分位評價模型)，只是獨立成第4個衛星分類方便你分開檢視這幾檔「趨勢成長」邏輯的持股。衛星額度與Tab4/Tab5共用同一個10%總上限，不是額外多10%。</p>
+    <div class="jumpnav" id="jump-t8"></div>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t8"></tbody></table>
+    <div id="detail-t8"></div>
   </div>
 
   <div class="score-methodology">
@@ -459,8 +467,8 @@ function freshnessStatus(latestDateStr, now){
   return {level:'warn', label:`${latestDateStr}（比預期落後，建議檢查Windows工作排程器是否正常執行）`};
 }
 
-const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t7:'核心(4) 債券型ETF', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型'};
-const CATCLASS = {t1:'core', t2:'core', t3:'core', t7:'core', t4:'sat', t5:'sat', t6:'sat'};
+const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t7:'核心(4) 債券型ETF', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型', t8:'衛星(4) 趨勢成長股'};
+const CATCLASS = {t1:'core', t2:'core', t3:'core', t7:'core', t4:'sat', t5:'sat', t6:'sat', t8:'sat'};
 
 /* ---------- 標的設定：只保留「沒有自動化資料源」的手動維護內容 ---------- */
 const TICKERS = [
@@ -626,6 +634,53 @@ const TICKERS = [
    t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
    t.avgFillDays!=null?`最近幾次配息平均填息天數約${t.avgFillDays.toFixed(0)}天`:'填息天數資料尚不足',
    `這檔是2026年內較新掛牌的ETF，歷史資料仍在累積中，部分統計(如PE百分位式的評價模型)不適用於債券ETF`
+ ]},
+
+{tab:'t8',symbol:'2344',name:'華邦電',deepDive:true,
+ staticFields:[
+   ['產業別','半導體-記憶體(DRAM/NOR Flash)，手動維護'],
+   ['預估EPS來源','FactSet最新調查(11位分析師)，2026年EPS預估中位數21.27元，2026-08查證，來源：鉅亨網(news.cnyes.com)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:21.27},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（記憶體屬景氣循環股，股價/獲利波動大，門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局（記憶體循環股，留意產業景氣位階）',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，2344是新加入標的)',
+   `記憶體(DRAM/NOR Flash)屬景氣循環產業，獲利波動度通常高於一般半導體股，留意產業循環位階再決定加碼力道`
+ ]},
+{tab:'t8',symbol:'2404',name:'漢唐',deepDive:true,
+ staticFields:[
+   ['產業別','電子-其他電子，台積電無塵室主要供應商，手動維護'],
+   ['主要業務','高科技廠房整廠/無塵室/機電/製程支援系統整合服務(採購、施工、試車、維護一站式)，2026-08查證，來源：富果法說會摘要(blog.fugle.tw)'],
+   ['預估EPS來源','公司法說會(2026-06-11)全年預估EPS約64.8元，屬法人/公司預估值非近四季實際值，來源：富果(blog.fugle.tw)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:64.8},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（訂單集中於半導體資本支出循環，門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，2404是新加入標的)',
+   `訂單高度集中在台積電等半導體大廠的資本支出循環，留意半導體業擴廠力道是否放緩`
+ ]},
+{tab:'t8',symbol:'2317',name:'鴻海',deepDive:true,
+ staticFields:[
+   ['產業別','電子零組件/ICT代工(EMS)，手動維護'],
+   ['預估EPS來源','法人預估2026年EPS約17.79元，2026-08查證，來源：孫慶龍投資部落格引述法人預估(sie.com.tw)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:17.79},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史)',
+   `車用零組件(充電相關配件/結構件/連接線)是近期成長動能來源，留意EV相關業務佔比變化`
  ]},
 
 {tab:'t5',symbol:'00646',name:'元大S&P500',
@@ -1166,7 +1221,7 @@ function overviewExtraCols(t){
     const chip = t.chipToday!=null ? `${t.chipToday>=0?'買超':'賣超'}${Math.abs(Math.round(t.chipToday/1000)).toLocaleString()}張` : '--';
     return [['外資近日',chip],['NIM','待補']];
   }
-  if(tab==='t4'){
+  if(tab==='t4'||tab==='t8'){
     const pe = t.peRank!=null ? `約${t.peRank.toFixed(0)}%` : '資料不足';
     return [['PE百分位',pe],['衛星額度',t.cfg.satelliteQuota||'--']];
   }
@@ -1480,7 +1535,7 @@ function tabExtraCols(t, tab){
     const chip = t.chipToday!=null ? `${t.chipToday>=0?'買超':'賣超'}約${Math.abs(Math.round(t.chipToday/1000)).toLocaleString()}張` : '--';
     return [chip, '待補'];
   }
-  if(tab==='t4'){
+  if(tab==='t4'||tab==='t8'){
     const pe = t.peRank!=null ? `約${t.peRank.toFixed(0)}%` : '資料不足';
     return [pe, t.cfg.satelliteQuota||'--'];
   }
@@ -1720,13 +1775,13 @@ function dynamicCatFields(t, tab){
   if(tab==='t2'||tab==='t7'){
     out.push(['平均填息天數', t.avgFillDays!=null?`約${t.avgFillDays.toFixed(0)}天（近${t.fillEventsCount}次除息，${t.stillFillingCount}次尚未填息）`:(t.fillEventsCount?'近期除息尚未填息':'資料尚未取得')]);
   }
-  if(tab==='t3'||tab==='t4'){
+  if(tab==='t3'||tab==='t4'||tab==='t8'){
     out.push(['三大法人(近日)', t.chipToday!=null?`外資${t.chipToday>=0?'買超':'賣超'}約${Math.abs(Math.round(t.chipToday/1000)).toLocaleString()}張`:'資料尚未取得']);
   }
   if(tab==='t5'){
     out.push(['海外對標', t.overseasBenchmark?`${t.overseasBenchmark.ticker} $${t.overseasBenchmark.price.toFixed(2)}（${t.overseasBenchmark.date}）`:'資料尚未取得']);
   }
-  if(tab==='t4'){
+  if(tab==='t4'||tab==='t8'){
     out.push(['PE歷史百分位', t.peRank!=null?`約${t.peRank.toFixed(0)}%（${t.peHistCount}筆歷史資料）`:`資料不足（${t.peHistCount||0}筆，需20筆以上）`]);
     out.push(['衛星額度佔用', t.cfg.satelliteQuota]);
   }
@@ -1884,7 +1939,7 @@ async function initApp(){
     // 所以只在「分表格/分頁籤」這一步驟排除它，不是整個從results拿掉。
     const indexTicker = results.find(t=>t.cfg.tab==='idx');
     const portfolioResults = results.filter(t=>t.cfg.tab!=='idx');
-    const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[],t7:[]};
+    const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[],t7:[],t8:[]};
     portfolioResults.forEach(t=>groups[t.cfg.tab].push(t));
     renderOverview(portfolioResults);
     Object.keys(groups).forEach(tab=>renderTab(tab, groups[tab]));
