@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>台股追蹤總覽（六分類，真實資料）</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- K棒圖表用：date-fns轉接器(給time scale解析日期)+官方candlestick外掛(chartjs-chart-financial)。
+     bundle.min.js版本已經內含date-fns，不用再另外載一支date-fns的script。 -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -868,7 +872,7 @@ function processInstitutional(rows){
 function computeTicker(cfg, raw){
   const rows = raw.priceRows;
   if(!rows || rows.length===0){
-    return {cfg, insufficient:true, closes:[],highs:[],lows:[],opens:[],dates:[]};
+    return {cfg, insufficient:true, closes:[],highs:[],lows:[],opens:[],dates:[],tradeDates:[]};
   }
   const closes = rows.map(r=>Number(r.close));
   const highs = rows.map(r=>r.high!=null?Number(r.high):Number(r.close));
@@ -877,6 +881,9 @@ function computeTicker(cfg, raw){
   // 這種情況下該天的K棒實體會塌成一條線，不會報錯，只是那天看起來像十字線。
   const opens = rows.map(r=>r.open!=null?Number(r.open):Number(r.close));
   const dates = rows.map(r=>{const d=new Date(r.trade_date+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate();});
+  // K棒圖表要用真正的日期(給time scale用)，跟上面純顯示用的"M/D"字串分開存，
+  // 兩邊筆數/順序完全對齊(都是同一個rows陣列map出來的)。
+  const tradeDates = rows.map(r=>r.trade_date);
 
   const ema20=emaSeries(closes,20), ema60=emaSeries(closes,60);
   const rsiArr=rsiSeries(closes,14);
@@ -886,7 +893,7 @@ function computeTicker(cfg, raw){
   const last=closes.length-1;
 
   const t = {
-    cfg, closes,highs,lows,opens,dates,ema20,ema60,rsiArr,macd,kd,h20,l20,
+    cfg, closes,highs,lows,opens,dates,tradeDates,ema20,ema60,rsiArr,macd,kd,h20,l20,
     price:closes[last], pct: last>0 ? (closes[last]-closes[last-1])/closes[last-1]*100 : null,
     ema20v:ema20[last], ema60v:ema60[last], rsi:rsiArr[last],
     dif:macd.dif[last], dea:macd.dea[last], osc:macd.osc[last],
@@ -1834,43 +1841,58 @@ function buildCharts(t, tab){
     plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10}}}},
     scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{display:false}}}};
 
-  // K棒(蠟燭圖)：Chart.js本身沒有內建candlestick類型，這裡用「浮動長條圖(floating bar)」
-  // 疊兩層做出K棒視覺——一層細長條畫最高/最低價的「上下影線」，一層較粗的長條畫
-  // 開盤/收盤價的「實體」，兩層共用同一個x位置(scales.x.grouped:false讓它們疊在一起
-  // 而不是併排)。顏色照台股慣例：收盤>=開盤(上漲/平盤)用紅色，收盤<開盤(下跌)用綠色。
+  // K棒(蠟燭圖)：改用Chart.js官方外掛 chartjs-chart-financial(CandlestickController/
+  // CandlestickElement，<head>已經載入)取代先前手刻的「兩個浮動長條疊在一起」做法。
+  // 手刻版本試了3輪(改資料集順序、拿掉錯用的stack、調寬度)都還是無法穩定畫出上下影線
+  // 跟十字線，原因是「兩個各自獨立的bar dataset硬疊在同一個x位置」本來就很脆弱、容易被
+  // Chart.js的長條寬度/群組計算互相干擾。官方外掛的每一根K棒是「一個自訂圖形元素」，
+  // 用一次canvas繪圖(moveTo/lineTo畫上下影線+fillRect畫實體)完成，不會有這類疊圖問題，
+  // 十字線(開盤=收盤)也會自動畫成一條扁平線，不用像之前那樣手動加最小高度墊高。
+  //
+  // 顏色語意提醒(重要，容易搞混)：這個外掛內部命名的"up"/"down"跟一般直覺是反過來的——
+  // 原始碼寫死「收盤<開盤 → 套用colors.up」「收盤>開盤 → 套用colors.down」(等於外掛把
+  // "up"當成"開高走低"的顏色代號，不是「股價上漲」的意思)。要畫成台股慣例(收盤>開盤=
+  // 上漲=紅色、收盤<開盤=下跌=綠色)，必須把colors.up設成綠色、colors.down設成紅色，
+  // 兩個名稱剛好要對調，這裡用UP_COLOR/DOWN_COLOR(代表真正的漲/跌顏色)明確標註，
+  // 避免以後改code時又被外掛的命名誤導。
   const UP_COLOR = '#d9363e', DOWN_COLOR = '#1e9e5a';
-  const barColors = t.closes.map((c,i)=> (c>=t.opens[i] ? UP_COLOR : DOWN_COLOR));
-  const wickData = t.closes.map((c,i)=> [t.lows[i], t.highs[i]]);
-  const bodyData = t.closes.map((c,i)=> [Math.min(t.opens[i],c), Math.max(t.opens[i],c)]);
+  const candleColors = {up: DOWN_COLOR, down: UP_COLOR, unchanged: '#8a8f98'};
   const fmt2 = (v)=> v==null ? '--' : Number(v).toFixed(2);
 
+  // K棒圖表改用時間軸(time scale)，需要「真正的日期」而不是純顯示用的"M/D"字串，
+  // 這裡統一轉成epoch毫秒數，EMA/高低線也比照辦理，確保4條線+K棒共用同一個x軸對得上。
+  const xMs = t.tradeDates.map(d=> new Date(d+'T00:00:00').getTime());
+  const toXY = (arr)=> arr.map((v,i)=> ({x:xMs[i], y:v==null?null:v}));
+  const candleData = t.closes.map((c,i)=> ({x:xMs[i], o:t.opens[i], h:t.highs[i], l:t.lows[i], c}));
+
   const priceChart = new Chart(document.getElementById('price_'+id), {
-    type:'bar',
-    data:{labels:dates, datasets:[
-      {label:'_wick',data:wickData,backgroundColor:barColors,borderWidth:0,barPercentage:0.18,categoryPercentage:0.9},
-      {label:'K棒',data:bodyData,backgroundColor:barColors,borderWidth:0,barPercentage:0.55,categoryPercentage:0.9},
-      {type:'line',label:'EMA20',data:t.ema20,borderColor:'#e08a1e',borderWidth:1.3,pointRadius:0},
-      {type:'line',label:'EMA60',data:t.ema60,borderColor:'#2b7fd9',borderWidth:1.3,pointRadius:0},
-      {type:'line',label:'20日高',data:t.h20,borderColor:'#d9363e',borderWidth:1,borderDash:[4,3],pointRadius:0},
-      {type:'line',label:'20日低',data:t.l20,borderColor:'#1e9e5a',borderWidth:1,borderDash:[4,3],pointRadius:0},
+    type:'candlestick',
+    data:{datasets:[
+      // 均線/高低線排在陣列前面，K棒排最後面——Chart.js「陣列後面的資料集畫在上面」，
+      // 讓K棒蓋在均線上面(只會局部蓋住經過那一根K棒的一小段，一般看盤軟體都是這樣畫)。
+      {type:'line',label:'EMA20',data:toXY(t.ema20),borderColor:'#e08a1e',borderWidth:1.3,pointRadius:0},
+      {type:'line',label:'EMA60',data:toXY(t.ema60),borderColor:'#2b7fd9',borderWidth:1.3,pointRadius:0},
+      {type:'line',label:'20日高',data:toXY(t.h20),borderColor:'#d9363e',borderWidth:1,borderDash:[4,3],pointRadius:0},
+      {type:'line',label:'20日低',data:toXY(t.l20),borderColor:'#1e9e5a',borderWidth:1,borderDash:[4,3],pointRadius:0},
+      {type:'candlestick',label:'K棒',data:candleData,
+        backgroundColors:candleColors, borderColors:candleColors, borderWidth:1,
+        barPercentage:0.65, categoryPercentage:0.85},
     ]},
     options:{...common,
       plugins:{...common.plugins,
-        legend:{...common.plugins.legend, labels:{...common.plugins.legend.labels, filter:(item)=>item.text!=='_wick'}},
         tooltip:{callbacks:{
-          // 影線那筆資料('_wick')不用另外顯示一行tooltip，開高低收都已經在'K棒'那筆帶出，
-          // 不然同一天會出現兩行看起來很像的高低價，反而容易看錯。
           label:(ctx)=>{
-            if(ctx.dataset.label==='_wick') return null;
             if(ctx.dataset.label==='K棒'){
-              const i=ctx.dataIndex;
-              return `K棒 開${fmt2(t.opens[i])} 高${fmt2(t.highs[i])} 低${fmt2(t.lows[i])} 收${fmt2(t.closes[i])}`;
+              const r = ctx.raw;
+              return `K棒 開${fmt2(r.o)} 高${fmt2(r.h)} 低${fmt2(r.l)} 收${fmt2(r.c)}`;
             }
             return `${ctx.dataset.label}: ${ctx.formattedValue}`;
           },
         }},
       },
-      scales:{...common.scales, x:{...common.scales.x, grouped:false, stacked:false}, y:{ticks:{font:{size:9}}}}}
+      // x軸沿用外掛預設的time/timeseries型態(不覆寫type)，只調整刻度顯示密度跟字體，
+      // 這樣才能吃到官方candlestick controller自己算好的最高/最低價y軸範圍(getMinMax)。
+      scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{display:false}}, y:{ticks:{font:{size:9}}}}}
   });
 
   const rsi70=dates.map(()=>70), rsi30=dates.map(()=>30);
