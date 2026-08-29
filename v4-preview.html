@@ -210,6 +210,28 @@
   .quota-box{background:#fff7ea;border-left:3px solid var(--sat);padding:8px 10px;font-size:12px;color:#7a4b00;margin-bottom:14px;border-radius:0 6px 6px 0;}
   .note-box{background:#fafafa;border-left:3px solid #c9ccd2;padding:8px 10px;font-size:12px;color:var(--sub);margin-top:8px;margin-bottom:14px;border-radius:0 6px 6px 0;}
   .disclaimer{margin-top:30px;padding-top:16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--sub);line-height:1.7;}
+
+  /* ===== TWSE Technical Analysis AI 專屬分頁（2026-08-29新增，獨立資料表twse_daily_analysis） ===== */
+  .twse-hero{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px;}
+  .twse-hero .eyebrow{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.5px;width:100%;}
+  .twse-hero .price{font-size:26px;font-weight:800;}
+  .twse-hero .chg{font-size:13px;font-weight:700;padding:3px 10px;border-radius:8px;}
+  .twse-hero .chg.up{background:#fdecec;color:var(--up);}
+  .twse-hero .chg.down{background:#eafaf1;color:var(--down);}
+  .twse-hero .fresh{margin-left:auto;font-size:12px;color:var(--sub);}
+  .twse-grid2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;align-items:start;}
+  @media(max-width:760px){.twse-grid2{grid-template-columns:1fr;}}
+  .twse-gauge-num{font-size:30px;font-weight:800;margin-top:4px;}
+  .twse-gauge-track{height:10px;background:#eef0f3;border-radius:6px;overflow:hidden;margin:8px 0;}
+  .twse-gauge-fill{height:100%;background:linear-gradient(90deg,#a15c00,var(--up));border-radius:6px;}
+  .twse-ticket-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  @media(max-width:760px){.twse-ticket-grid{grid-template-columns:1fr;}}
+  .twse-ticket{border-radius:0 8px 8px 0;padding:10px 12px;font-size:12.5px;line-height:1.8;}
+  .twse-ticket.bull{background:#eafaf1;border-left:3px solid var(--entry);}
+  .twse-ticket.bear{background:#fdecec;border-left:3px solid var(--exit);}
+  .twse-ticket .tt{font-weight:700;font-size:13px;margin-bottom:4px;display:block;}
+  .twse-ticket b{color:var(--sub);font-weight:600;}
+  .twse-empty{background:#fafbfc;border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--sub);font-size:13px;}
 </style>
 </head>
 <body>
@@ -246,7 +268,8 @@
 <div class="layout" id="layout">
   <div class="topnav-wrap">
     <div class="topnav">
-      <button class="tab-btn active" data-tab="t0">📋 總覽</button>
+      <button class="tab-btn active" data-tab="twse-ai">🎯 台股技術分析AI</button>
+      <button class="tab-btn" data-tab="t0">📋 總覽</button>
       <span class="nav-divider">核心</span>
       <button class="tab-btn" data-tab="t1">①指數型ETF</button>
       <button class="tab-btn" data-tab="t2">②高股息ETF</button>
@@ -279,7 +302,12 @@
     <div class="alloc-editnote">這兩個百分比目前是你手動輸入的示意數字，資料庫裡沒有你實際持股股數，沒辦法自動換算真正的配置比重——如果想做成即時計算，需要你另外提供實際持股數量。</div>
   </div>
 
-  <div class="tab-panel active" id="t0">
+  <div class="tab-panel active" id="twse-ai">
+    <p class="panel-desc">台股加權指數（TAIEX）15步驟技術分析，由「TWSE Technical Analysis AI」專案每個交易日盤後產生：長期/中期/短期趨勢、Market Structure、支撐壓力、K線與圖表型態、量價、MA/EMA/MACD/RSI/KD、型態確認度、歷史案例比對(50型態回測統計庫)、多空情境與交易策略。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論。</p>
+    <div id="twse-tab-body"><div class="twse-empty">資料載入中...</div></div>
+  </div>
+
+  <div class="tab-panel" id="t0">
     <p class="panel-desc">全部 15 檔標的一覽，不含圖表——先看這頁抓重點，需要細節再點「詳情」跳到對應分類頁。「本日觸發」欄位是根據真實資料算出的訊號(技術面EMA20穿越、估值面PE百分位、籌碼面外資連續買賣超)，跟你Discord收到的通知邏輯一致。最右側兩欄依各分類顯示較有用的重點指標(折溢價/填息天數/三大法人/PE百分位/海外對標等)；進場／出場條件草案請到各分類頁詳情查看。</p>
 
     <h4 style="margin:4px 0 6px;font-size:13.5px;">📊 大盤參考：台股加權指數(TAIEX)</h4>
@@ -1944,6 +1972,102 @@ function calcPE(symbol){
     `<span class="band">90百分位(過熱)：<b>${hot.toFixed(1)}元</b>（PE${m.p90.toFixed(1)}x）</span>`;
 }
 
+/* ---------- TWSE Technical Analysis AI 專屬分頁（2026-08-29新增） ----------
+   資料來源：Supabase的twse_daily_analysis表，由「TWSE Technical Analysis AI」
+   本機Cowork排程任務每個交易日盤後寫入一筆(snapshot_date, generated_at, data jsonb)。
+   跟上面15檔標的的資料流完全獨立，用自己的try/catch包起來，就算這張表還沒建立、
+   還沒有資料、或查詢失敗，也不會讓下面其他分頁跟著掛掉。 */
+function twseEsc(s){
+  if(s==null) return '';
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function twseNum(v, digits){
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(digits==null?2:digits) : '--';
+}
+async function loadTwseAnalysis(client){
+  const body = document.getElementById('twse-tab-body');
+  if(!body) return;
+  try{
+    const {data, error} = await client
+      .from('twse_daily_analysis')
+      .select('snapshot_date, generated_at, data')
+      .order('snapshot_date', {ascending:false})
+      .limit(1);
+    if(error) throw error;
+    if(!data || data.length===0){
+      body.innerHTML = '<div class="twse-empty">尚無資料——「TWSE Technical Analysis AI」本機排程任務還沒有寫入第一筆分析結果，或twse_daily_analysis資料表尚未建立。這不影響下面其他分頁的資料。</div>';
+      return;
+    }
+    body.innerHTML = renderTwseAnalysis(data[0]);
+  }catch(e){
+    body.innerHTML = `<div class="twse-empty">台股技術分析資料載入失敗：${twseEsc(e.message||e)}<br>（不影響下面其他分頁，其他標的資料仍正常。若剛設定好排程還沒執行過，這是正常現象。）</div>`;
+  }
+}
+function renderTwseAnalysis(row){
+  const d = row.data || {};
+  const change = Number(d.change);
+  const changePct = Number(d.change_pct);
+  const chgUp = Number.isFinite(change) ? change >= 0 : true;
+  const scoreVal = Math.max(0, Math.min(100, Number(d.confidence_score)||0));
+  const phaseCls = /多|bull/i.test(d.market_phase||'') ? 'entry' : (/空|bear/i.test(d.market_phase||'') ? 'exit' : 'watch');
+
+  const statCards = (d.stat_cards||[]).map(c=>
+    `<div class="tech-cell"><div class="lbl">${twseEsc(c.label)}</div><div class="val">${twseEsc(c.value)}</div>${c.note?`<div class="note">${twseEsc(c.note)}</div>`:''}</div>`
+  ).join('') || '<div class="twse-empty">尚無統計卡片資料</div>';
+
+  const caseRows = (d.case_table||[]).map(r=>
+    `<tr><td>${twseEsc(r.pattern)}</td><td>${twseEsc(r.direction)}</td><td>${twseEsc(r.n)}</td><td>${r.win_rate!=null?twseNum(r.win_rate,1)+'%':'--'}</td><td>${r.benchmark!=null?twseNum(r.benchmark,1)+'%':'--'}</td><td>${r.edge_pp!=null?(Number(r.edge_pp)>=0?'+':'')+twseNum(r.edge_pp,1)+'pp':'--'}</td></tr>`
+  ).join('') || '<tr><td colspan="6" class="todo">尚無歷史案例比對資料</td></tr>';
+
+  const ticketHtml = (d.strategy||[]).map(s=>{
+    const bull = /多|bull/i.test(s.scenario||'');
+    return `<div class="twse-ticket ${bull?'bull':'bear'}">
+      <span class="tt">${twseEsc(s.scenario)}${s.confidence!=null?`（信心${twseEsc(s.confidence)}）`:''}</span>
+      <b>觸發：</b>${twseEsc(s.trigger)}<br>
+      <b>確認：</b>${twseEsc(s.confirm)}<br>
+      <b>失效：</b>${twseEsc(s.invalidate)}<br>
+      <b>目標：</b>${twseEsc(s.target)}<br>
+      <b>風險：</b>${twseEsc(s.risk)}
+    </div>`;
+  }).join('') || '<div class="twse-empty">尚無策略資料</div>';
+
+  return `
+    <div class="twse-hero">
+      <span class="eyebrow">TWSE TECHNICAL ANALYSIS AI ｜ 資料日期 ${twseEsc(d.snapshot_date||row.snapshot_date)}</span>
+      <span class="price">${Number.isFinite(Number(d.price))?Number(d.price).toLocaleString():'--'}</span>
+      ${Number.isFinite(change)?`<span class="chg ${chgUp?'up':'down'}">${chgUp?'▲':'▼'} ${twseNum(Math.abs(change),2)} (${chgUp?'+':''}${twseNum(changePct,2)}%)</span>`:''}
+      <span class="fresh">${twseEsc(d.freshness_note)}</span>
+    </div>
+
+    <div class="twse-grid2">
+      <div class="ai-verdict-card">
+        <span class="ai-verdict-badge ${phaseCls}">${twseEsc(d.market_phase)}</span>
+        ${d.pattern_label?`<span class="ai-verdict-badge neutral" style="margin-left:6px;">${twseEsc(d.pattern_label)}</span>`:''}
+        <div class="ai-verdict-title" style="margin-top:8px;">${twseEsc(d.headline)}</div>
+        <div class="ai-verdict-hint">${twseEsc(d.summary)}</div>
+        ${d.structure_note?`<div class="note-box">${twseEsc(d.structure_note)}</div>`:''}
+      </div>
+      <div class="ai-score-card">
+        <div style="font-size:12px;color:var(--sub);">綜合信心分數</div>
+        <div class="twse-gauge-num">${scoreVal}<span style="font-size:13px;color:var(--sub);font-weight:600;"> / 100</span></div>
+        <div class="twse-gauge-track"><div class="twse-gauge-fill" style="width:${scoreVal}%;"></div></div>
+        <div class="score-note" style="margin-left:0;">${twseEsc(d.confidence_note)}</div>
+      </div>
+    </div>
+
+    <div class="tech-grid">${statCards}</div>
+
+    <h4 style="margin:4px 0 8px;font-size:13.5px;">📚 歷史案例比較（50型態回測統計庫）</h4>
+    <table class="mini"><thead><tr><th>型態</th><th>方向</th><th>樣本數</th><th>60日勝率</th><th>基準</th><th>優勢(pp)</th></tr></thead><tbody>${caseRows}</tbody></table>
+
+    <h4 style="margin:14px 0 8px;font-size:13.5px;">🎯 多空情境與交易策略</h4>
+    <div class="twse-ticket-grid">${ticketHtml}</div>
+
+    <div class="disclaimer">${twseEsc(d.footer_note)||'本分析由AI依台股加權指數技術面產生，僅供參考，不構成投資建議。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論；型態確認度與信心分數請一併參考回測統計庫的樣本數與優勢(pp)。'}</div>
+  `;
+}
+
 /* ---------- 導覽切換 ---------- */
 function activateTab(tabId){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabId));
@@ -1977,6 +2101,7 @@ async function initApp(){
   }
   $('input-url').value=url; $('input-key').value=key;
   supabaseClient = window.supabase.createClient(url,key);
+  loadTwseAnalysis(supabaseClient); // TWSE分頁獨立載入，失敗不影響下面15檔標的
   $('loading').style.display='block';
   try{
     const results = await Promise.all(TICKERS.map(async cfg=>{
