@@ -211,7 +211,7 @@
   .note-box{background:#fafafa;border-left:3px solid #c9ccd2;padding:8px 10px;font-size:12px;color:var(--sub);margin-top:8px;margin-bottom:14px;border-radius:0 6px 6px 0;}
   .disclaimer{margin-top:30px;padding-top:16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--sub);line-height:1.7;}
 
-  /* ===== TWSE Technical Analysis AI 專屬分頁（2026-08-29新增，獨立資料表twse_daily_analysis） ===== */
+  /* ===== TWSE Technical Analysis AI 專屬分頁（獨立資料表twse_daily_analysis） ===== */
   .twse-hero{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px;}
   .twse-hero .eyebrow{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.5px;width:100%;}
   .twse-hero .price{font-size:26px;font-weight:800;}
@@ -232,6 +232,35 @@
   .twse-ticket .tt{font-weight:700;font-size:13px;margin-bottom:4px;display:block;}
   .twse-ticket b{color:var(--sub);font-weight:600;}
   .twse-empty{background:#fafbfc;border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;color:var(--sub);font-size:13px;}
+  /* 快速判讀（對照project instructions案例1格式：型態/趨勢/動能/成交量/關鍵壓力/關鍵支撐/觸發/信心） */
+  .twse-quickfacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px;background:#f7f8fa;border-radius:8px;padding:10px 12px;margin-bottom:12px;}
+  .twse-quickfacts div .lbl{font-size:11px;color:var(--sub);display:block;}
+  .twse-quickfacts div .val{font-size:13px;font-weight:600;}
+  .twse-headline{font-size:14px;font-weight:700;margin:2px 0 6px;}
+  .twse-overview{font-size:12.5px;color:#334;line-height:1.7;margin-bottom:4px;}
+  /* AI辨識→Pattern→歷史搜尋→相似案例→統計結果→策略：推理流程視覺化 */
+  .twse-pipeline-title{font-size:11.5px;font-weight:700;color:var(--sub);margin:2px 0 6px;}
+  .twse-pipeline{display:flex;align-items:stretch;gap:2px;overflow-x:auto;margin-bottom:18px;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
+  .twse-pipeline .stage{flex:1 0 120px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;}
+  .twse-pipeline .stage .stg-name{font-weight:700;color:var(--accent);font-size:11px;margin-bottom:3px;display:block;white-space:nowrap;}
+  .twse-pipeline .stage .stg-text{color:var(--sub);line-height:1.5;}
+  .twse-pipeline .arrow{display:flex;align-items:center;color:#c7cbd3;font-size:14px;flex-shrink:0;padding:0 1px;}
+  /* ①-⑫逐步驟卡（長期趨勢...型態確認程度） */
+  .twse-steps{margin-bottom:6px;}
+  .twse-step{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f0f1f3;}
+  .twse-step:last-child{border-bottom:none;}
+  .twse-step .num{flex-shrink:0;font-size:15px;font-weight:700;color:var(--accent);width:20px;text-align:center;line-height:1.6;}
+  .twse-step .body{flex:1;min-width:0;}
+  .twse-step .title{font-weight:700;font-size:12.5px;margin-bottom:2px;}
+  .twse-step .text{font-size:12.5px;color:#334;line-height:1.7;}
+  .twse-section-title{font-size:13.5px;font-weight:700;margin:18px 0 8px;}
+  /* ⑭多空情境（條件與觸發點，跟⑮策略ticket分開陳列） */
+  .twse-scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  @media(max-width:760px){.twse-scenario-grid{grid-template-columns:1fr;}}
+  .twse-scenario{border-radius:0 8px 8px 0;padding:10px 12px;font-size:12.5px;line-height:1.8;}
+  .twse-scenario.bull{background:#eafaf1;border-left:3px solid var(--entry);}
+  .twse-scenario.bear{background:#fdecec;border-left:3px solid var(--exit);}
+  .twse-scenario .tt{font-weight:700;font-size:13px;margin-bottom:4px;display:block;}
 </style>
 </head>
 <body>
@@ -1985,6 +2014,11 @@ function twseNum(v, digits){
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(digits==null?2:digits) : '--';
 }
+const TWSE_CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+function twseCircled(no){
+  const i = Number(no);
+  return (Number.isFinite(i) && i>=1 && i<=15) ? TWSE_CIRCLED[i-1] : `(${twseEsc(no)})`;
+}
 async function loadTwseAnalysis(client){
   const body = document.getElementById('twse-tab-body');
   if(!body) return;
@@ -2006,6 +2040,12 @@ async function loadTwseAnalysis(client){
 }
 function renderTwseAnalysis(row){
   const d = row.data || {};
+  const hasNewSchema = Array.isArray(d.steps) && d.steps.length>0;
+  return hasNewSchema ? renderTwseAnalysisV2(d, row) : renderTwseAnalysisV1(d, row);
+}
+
+/* ---- 舊版schema（v3 Instructions產出，無steps/pipeline/scenarios時的相容渲染） ---- */
+function renderTwseAnalysisV1(d, row){
   const change = Number(d.change);
   const changePct = Number(d.change_pct);
   const chgUp = Number.isFinite(change) ? change >= 0 : true;
@@ -2058,10 +2098,130 @@ function renderTwseAnalysis(row){
 
     <div class="tech-grid">${statCards}</div>
 
-    <h4 style="margin:4px 0 8px;font-size:13.5px;">📚 歷史案例比較（50型態回測統計庫）</h4>
+    <h4 style="margin:4px 0 8px;font-size:13.5px;">⑬ 歷史案例比較（50型態回測統計庫）</h4>
     <table class="mini"><thead><tr><th>型態</th><th>方向</th><th>樣本數</th><th>60日勝率</th><th>基準</th><th>優勢(pp)</th></tr></thead><tbody>${caseRows}</tbody></table>
 
-    <h4 style="margin:14px 0 8px;font-size:13.5px;">🎯 多空情境與交易策略</h4>
+    <h4 style="margin:14px 0 8px;font-size:13.5px;">⑭⑮ 多空情境與交易策略</h4>
+    <div class="twse-ticket-grid">${ticketHtml}</div>
+
+    <div class="disclaimer">${twseEsc(d.footer_note)||'本分析由AI依台股加權指數技術面產生，僅供參考，不構成投資建議。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論；型態確認度與信心分數請一併參考回測統計庫的樣本數與優勢(pp)。'}</div>
+  `;
+}
+
+/* ---- 新版schema（v4 Instructions產出，含steps①-⑫／pipeline六階段／scenarios⑭）---- */
+function renderTwseAnalysisV2(d, row){
+  const change = Number(d.change);
+  const changePct = Number(d.change_pct);
+  const chgUp = Number.isFinite(change) ? change >= 0 : true;
+  const scoreVal = Math.max(0, Math.min(100, Number(d.confidence_score)||0));
+  const phaseCls = /多|bull/i.test(d.market_phase||'') ? 'entry' : (/空|bear/i.test(d.market_phase||'') ? 'exit' : 'watch');
+
+  /* 案例1風格：型態/趨勢/動能/成交量/關鍵壓力/關鍵支撐/做多觸發/回檔策略/空頭確認 */
+  const qf = [
+    ['型態', d.pattern_label],
+    ['趨勢', d.trend_label],
+    ['動能', d.momentum_label],
+    ['成交量', d.volume_status],
+    ['關鍵壓力', d.key_resistance],
+    ['關鍵支撐', d.key_support],
+    ['做多觸發', d.bull_trigger],
+    ['回檔策略', d.pullback_strategy],
+    ['空頭確認', d.bear_confirm],
+  ].filter(([,v])=>v!=null && String(v).trim()!=='');
+  const quickfactsHtml = qf.length
+    ? `<div class="twse-quickfacts">${qf.map(([lbl,val])=>`<div><span class="lbl">${twseEsc(lbl)}</span><span class="val">${twseEsc(val)}</span></div>`).join('')}</div>`
+    : '';
+
+  const pipeline = Array.isArray(d.pipeline) ? d.pipeline : [];
+  const pipelineHtml = pipeline.length ? `
+    <div class="twse-pipeline-title">🔗 分析推理流程（AI辨識 → Pattern → 歷史搜尋 → 相似案例 → 統計結果 → 策略）</div>
+    <div class="twse-pipeline">
+      ${pipeline.map((s,i)=>`${i>0?'<div class="arrow">→</div>':''}<div class="stage"><span class="stg-name">${twseEsc(s.stage)}</span><span class="stg-text">${twseEsc(s.text)}</span></div>`).join('')}
+    </div>` : '';
+
+  const steps = Array.isArray(d.steps) ? d.steps.slice().sort((a,b)=>(Number(a.no)||0)-(Number(b.no)||0)) : [];
+  const stepsHtml = steps.length ? `
+    <div class="twse-section-title">📋 十五步驟分析（①～⑫ 技術面逐項檢視）</div>
+    <div class="twse-steps">
+      ${steps.map(s=>`<div class="twse-step"><span class="num">${twseCircled(s.no)}</span><div class="body"><div class="title">${twseEsc(s.title)}</div><div class="text">${twseEsc(s.text)}</div></div></div>`).join('')}
+    </div>` : '<div class="twse-empty">尚無逐步驟分析資料</div>';
+
+  const statCards = (d.stat_cards||[]).map(c=>
+    `<div class="tech-cell"><div class="lbl">${twseEsc(c.label)}</div><div class="val">${twseEsc(c.value)}</div>${c.note?`<div class="note">${twseEsc(c.note)}</div>`:''}</div>`
+  ).join('');
+  const statGridHtml = statCards ? `
+    <div class="twse-section-title" style="margin-top:14px;">🔢 技術指標速覽</div>
+    <div class="tech-grid">${statCards}</div>` : '';
+
+  const caseRows = (d.case_table||[]).map(r=>
+    `<tr><td>${twseEsc(r.pattern)}</td><td>${twseEsc(r.direction)}</td><td>${twseEsc(r.n)}</td><td>${r.win_rate!=null?twseNum(r.win_rate,1)+'%':'--'}</td><td>${r.benchmark!=null?twseNum(r.benchmark,1)+'%':'--'}</td><td>${r.edge_pp!=null?(Number(r.edge_pp)>=0?'+':'')+twseNum(r.edge_pp,1)+'pp':'--'}</td></tr>`
+  ).join('') || '<tr><td colspan="6" class="todo">尚無歷史案例比對資料</td></tr>';
+
+  const scenarios = Array.isArray(d.scenarios) ? d.scenarios : [];
+  const scenarioCard = (s)=>{
+    const bull = /多|bull/i.test(s.type||s.title||'');
+    const conds = Array.isArray(s.conditions) ? s.conditions.map(c=>twseEsc(c)).join('<br>') : twseEsc(s.conditions);
+    return `<div class="twse-scenario ${bull?'bull':'bear'}">
+      <span class="tt">${twseEsc(s.title) || (bull?'偏多情境':'偏空情境')}</span>
+      ${conds?`<div>${conds}</div>`:''}
+      ${s.trigger?`<div style="margin-top:4px;"><b>觸發點：</b>${twseEsc(s.trigger)}</div>`:''}
+    </div>`;
+  };
+  const scenariosHtml = scenarios.length
+    ? `<div class="twse-scenario-grid">${scenarios.map(scenarioCard).join('')}</div>`
+    : '<div class="twse-empty">尚無多空情境資料</div>';
+
+  const ticketHtml = (d.strategy||[]).map(s=>{
+    const bull = /多|bull/i.test(s.scenario||'');
+    return `<div class="twse-ticket ${bull?'bull':'bear'}">
+      <span class="tt">${twseEsc(s.scenario)}${s.confidence!=null?`（信心${twseEsc(s.confidence)}）`:''}</span>
+      <b>觸發：</b>${twseEsc(s.trigger)}<br>
+      <b>確認：</b>${twseEsc(s.confirm)}<br>
+      <b>失效：</b>${twseEsc(s.invalidate)}<br>
+      <b>目標：</b>${twseEsc(s.target)}<br>
+      <b>風險：</b>${twseEsc(s.risk)}
+    </div>`;
+  }).join('') || '<div class="twse-empty">尚無策略資料</div>';
+
+  return `
+    <div class="twse-hero">
+      <span class="eyebrow">TWSE TECHNICAL ANALYSIS AI ｜ 資料日期 ${twseEsc(d.snapshot_date||row.snapshot_date)}</span>
+      <span class="price">${Number.isFinite(Number(d.price))?Number(d.price).toLocaleString():'--'}</span>
+      ${Number.isFinite(change)?`<span class="chg ${chgUp?'up':'down'}">${chgUp?'▲':'▼'} ${twseNum(Math.abs(change),2)} (${chgUp?'+':''}${twseNum(changePct,2)}%)</span>`:''}
+      <span class="fresh">${twseEsc(d.freshness_note)}</span>
+    </div>
+
+    ${quickfactsHtml}
+
+    <div class="twse-grid2">
+      <div class="ai-verdict-card">
+        <span class="ai-verdict-badge ${phaseCls}">${twseEsc(d.market_phase)}</span>
+        ${d.pattern_label?`<span class="ai-verdict-badge neutral" style="margin-left:6px;">${twseEsc(d.pattern_label)}</span>`:''}
+        <div class="twse-headline">${twseEsc(d.headline)}</div>
+        <div class="twse-overview">${twseEsc(d.summary)}</div>
+        ${d.structure_note?`<div class="note-box">④ Market Structure：${twseEsc(d.structure_note)}</div>`:''}
+      </div>
+      <div class="ai-score-card">
+        <div style="font-size:12px;color:var(--sub);">綜合信心分數</div>
+        <div class="twse-gauge-num">${scoreVal}<span style="font-size:13px;color:var(--sub);font-weight:600;"> / 100</span></div>
+        <div class="twse-gauge-track"><div class="twse-gauge-fill" style="width:${scoreVal}%;"></div></div>
+        <div class="score-note" style="margin-left:0;">${twseEsc(d.confidence_note)}</div>
+      </div>
+    </div>
+
+    ${pipelineHtml}
+
+    ${stepsHtml}
+
+    ${statGridHtml}
+
+    <div class="twse-section-title" style="margin-top:18px;">⑬ 歷史案例比較（50型態回測統計庫）</div>
+    <table class="mini"><thead><tr><th>型態</th><th>方向</th><th>樣本數</th><th>60日勝率</th><th>基準</th><th>優勢(pp)</th></tr></thead><tbody>${caseRows}</tbody></table>
+
+    <div class="twse-section-title">⑭ 多空情境</div>
+    ${scenariosHtml}
+
+    <div class="twse-section-title">⑮ 交易策略（觸發／確認／失效／目標／風險／信心分數）</div>
     <div class="twse-ticket-grid">${ticketHtml}</div>
 
     <div class="disclaimer">${twseEsc(d.footer_note)||'本分析由AI依台股加權指數技術面產生，僅供參考，不構成投資建議。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論；型態確認度與信心分數請一併參考回測統計庫的樣本數與優勢(pp)。'}</div>
