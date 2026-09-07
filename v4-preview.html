@@ -477,6 +477,26 @@ function kdSeries(highs,lows,closes,period){
 }
 function rollHigh(arr,p){return arr.map((_,i)=>i<p-1?null:Math.max(...arr.slice(i-p+1,i+1)));}
 function rollLow(arr,p){return arr.map((_,i)=>i<p-1?null:Math.min(...arr.slice(i-p+1,i+1)));}
+// 布林通道寬度(Bollinger Bandwidth)：(上軌-下軌)/中軌(SMA20)，用來判斷「盤整打底」還是
+// 「突破爆發」——通道收窄(數值變小)代表波動壓縮、可能正在打底；通道放寬(數值變大)代表
+// 波動擴張、可能正在噴出。這裡選布林通道寬度而不是ATR14，是因為「寬度」這個指標本身
+// 就是直接衡量「盤整vs噴出」這個階段判斷，比ATR(單純衡量波動幅度大小、沒有明確區分
+// 盤整/噴出兩種狀態)更貼近你想要的用途；之後如果還想同時看ATR14，用同樣的滾動視窗
+// 邏輯很容易再加一個函式，不影響現有架構。
+function bollingerBandwidthSeries(closes, period){
+  period = period||20;
+  const out = new Array(closes.length).fill(null);
+  for(let i=0;i<closes.length;i++){
+    if(i<period-1) continue;
+    const window = closes.slice(i-period+1, i+1);
+    const mid = window.reduce((a,b)=>a+b,0)/period;
+    const variance = window.reduce((a,b)=>a+(b-mid)*(b-mid),0)/period;
+    const sd = Math.sqrt(variance);
+    const upper = mid + 2*sd, lower = mid - 2*sd;
+    out[i] = mid===0 ? null : (upper-lower)/mid*100; // 用百分比表示，方便跨標的比較寬窄
+  }
+  return out;
+}
 // 跟 dashboard.html 的模組化評價模型、check_triggers.py 的PE百分位判斷用同一套算法，三邊口徑一致。
 function percentile(sortedAsc, p) {
   if (!sortedAsc || sortedAsc.length === 0) return null;
@@ -743,6 +763,51 @@ const TICKERS = [
    t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史)',
    `車用零組件(充電相關配件/結構件/連接線)是近期成長動能來源，留意EV相關業務佔比變化`
  ]},
+{tab:'t8',symbol:'2308',name:'台達電',deepDive:true,
+ staticFields:[
+   ['產業別','電子零組件-電源供應器/散熱，手動維護'],
+   ['預估EPS來源','FactSet最新調查(23位分析師)，2026年EPS預估中位數39.3元，2026-09查證，來源：鉅亨網(news.cnyes.com)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:39.3},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，2308是新加入標的)',
+   `AI伺服器電源/液冷散熱/HVDC高壓直流供電是主要成長動能，留意AI資料中心資本支出力道是否延續`
+ ]},
+{tab:'t8',symbol:'3017',name:'奇鋐',deepDive:true,
+ staticFields:[
+   ['產業別','電子零組件-散熱模組(Thermal)，手動維護'],
+   ['預估EPS來源','FactSet最新調查(19位分析師)，2026年EPS預估中位數87.95元，2026-09查證，來源：鉅亨網(news.cnyes.com)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:87.95},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（散熱族群評價偏高，門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，3017是新加入標的)',
+   `AI伺服器散熱需求是主要成長動能，法人預估已反映在高評價上，留意獲利成長是否能持續追上評價`
+ ]},
+{tab:'t8',symbol:'2368',name:'金像電',deepDive:true,
+ staticFields:[
+   ['產業別','電子零組件-PCB(印刷電路板)，手動維護'],
+   ['預估EPS來源','FactSet最新調查(10位分析師)，2026年EPS預估中位數38.28元，2026-09查證，來源：鉅亨網(news.cnyes.com)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
+ ],
+ peModel:{defaultEps:38.28},
+ rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（門檻示意，需你自行確認）。',
+ entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局',
+ exitRule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼',
+ satelliteQuota:'依你實際持股金額另行計算（手動維護）',
+ advice:t=>[
+   `技術面${t.price>=t.ema20v?'站上':'跌破'}EMA20(${fmt(t.ema20v,2)})，${t.price>=t.ema60v?'站上':'跌破'}EMA60(${fmt(t.ema60v,2)})，RSI ${fmt(t.rsi,1)}`,
+   t.peRank!=null?`PE歷史百分位約${t.peRank.toFixed(0)}%`:'PE百分位資料仍在累積中(需至少20筆估值歷史，2368是新加入標的)',
+   `AI伺服器/800G交換器用高階PCB是主要成長動能，留意產能開出速度與大客戶集中度風險`
+ ]},
 
 {tab:'t5',symbol:'00646',name:'元大S&P500',
  staticFields:[['追蹤指數','S&P500（手動維護）'],['匯率避險','未避險（手動維護）']],
@@ -774,6 +839,28 @@ const TICKERS = [
    `追蹤NASDAQ100，科技股權重高，波動度預期高於S&P500型ETF`,
    t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
    t.overseasBenchmark?`海外對標QQQ最新收盤 $${t.overseasBenchmark.price.toFixed(2)}（${t.overseasBenchmark.date}）`:'海外對標資料尚未取得'
+ ]},
+{tab:'t5',symbol:'00830',name:'國泰費城半導體',
+ staticFields:[['追蹤指數','費城半導體指數(SOX)（手動維護）'],['匯率避險','未避險（手動維護）']],
+ entryRule:'折溢價<-0.5%，或拉回測試EMA60不破',
+ exitRule:'折溢價>+1%不追買，或與半導體循環轉弱訊號同時出現',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `追蹤費城半導體指數(SOX)，成分股集中在美系半導體大廠(設備/IC設計/記憶體等)，波動度通常高於大盤型ETF`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   `目前尚未設定海外對標代理ETF(fetch_overseas_index.py的BENCHMARK_MAP)，這裡先不顯示海外對標價格，之後想加可以再說`,
+   `與其他海外ETF型部位共用衛星(2)配置額度，加碼前先看總表額度`
+ ]},
+{tab:'t5',symbol:'009828',name:'中信台日韓PCB',
+ staticFields:[['追蹤指數','台日韓PCB供應鏈主題指數（手動維護）'],['匯率避險','未避險（手動維護）']],
+ entryRule:'折溢價<-0.5%，或拉回測試EMA60不破',
+ exitRule:'折溢價>+1%不追買，或AI伺服器/PCB需求明顯降溫時不追買',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `追蹤台日韓三地PCB供應鏈相關企業，題材上跟衛星(4)的金像電(2368)有一定重疊，留意不要重複曝險過度集中`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   `這檔是2026年內較新掛牌/較小型的主題式ETF，流動性可能偏低，實際成交價差可能大於帳面折溢價，也留意歷史資料仍在累積中`,
+   `目前尚未設定海外對標代理ETF，這裡先不顯示海外對標價格`
  ]},
 
 {tab:'t4',symbol:'2330',name:'台積電',deepDive:true,
@@ -947,16 +1034,23 @@ function computeTicker(cfg, raw){
   const macd=macdSeries(closes);
   const kd=kdSeries(highs,lows,closes,9);
   const h20=rollHigh(highs,20), l20=rollLow(lows,20);
+  const bbw=bollingerBandwidthSeries(closes,20);
   const last=closes.length-1;
 
   const t = {
-    cfg, closes,highs,lows,opens,dates,tradeDates,ema20,ema60,rsiArr,macd,kd,h20,l20,
+    cfg, closes,highs,lows,opens,dates,tradeDates,ema20,ema60,rsiArr,macd,kd,h20,l20,bbw,
     price:closes[last], pct: last>0 ? (closes[last]-closes[last-1])/closes[last-1]*100 : null,
     ema20v:ema20[last], ema60v:ema60[last], rsi:rsiArr[last],
     dif:macd.dif[last], dea:macd.dea[last], osc:macd.osc[last],
-    kdk:kd.k[last], kdd:kd.d[last], h20v:h20[last], l20v:l20[last],
+    kdk:kd.k[last], kdd:kd.d[last], h20v:h20[last], l20v:l20[last], bbwv:bbw[last],
     latestTradeDate: rows[rows.length-1].trade_date, // 這檔標的目前資料庫裡最新的一筆交易日，給頂部「資料日期」核對機制用
   };
+
+  // 乖離率(%)：價格/均線相對位置，追價風險判斷用。EMA20_vs_EMA60_%>0代表多頭排列，
+  // 數字越大排列越開；Price_vs_EMA20_%太高代表短線已經漲多、追高風險上升。
+  t.priceVsEma20Pct = (t.price!=null && t.ema20v) ? (t.price-t.ema20v)/t.ema20v*100 : null;
+  t.priceVsEma60Pct = (t.price!=null && t.ema60v) ? (t.price-t.ema60v)/t.ema60v*100 : null;
+  t.ema20VsEma60Pct = (t.ema20v!=null && t.ema60v) ? (t.ema20v-t.ema60v)/t.ema60v*100 : null;
 
   // 機構持股(目前只有衛星(3)海外個股型NVDA/GOOG會有資料，其餘標的自然是null)
   if(raw.instRows && raw.instRows.length>0){
@@ -1539,6 +1633,61 @@ function scoreTierOf(total){
   if(total>=30) return {level, emoji:'🔴', label:'弱勢', action:'減碼'};
   return {level, emoji:'🔴', label:'強烈防守', action:'大幅降低曝險'};
 }
+/* ---------- 2026-09新增：訊號狀態enum(FORMING/WATCH/TRIGGERED/CONFIRMED/EXTENDED/
+   OVERHEATED/FAILED)。這是在既有的「連續分數(computeSignalScore)」跟「離散AND訊號
+   (computeSignalEngine/computeWarningSignals)」之上，再疊一層「目前處在生命週期
+   哪個階段」的判斷，規則式(deterministic)從既有欄位推導，不呼叫AI，判斷邏輯由上
+   往下第一個符合的規則生效：
+     FAILED     ：S4(趨勢反轉)本日全部條件成立，或EMA20<EMA60且價格<EMA60(空頭排列
+                  已成立，不是剛跌破而已)——趨勢確認轉空，加碼計畫應視為失效。
+     TRIGGERED  ：S1(超跌反轉)或S2(動能啟動)本日全部條件成立——剛出現進場訊號。
+     OVERHEATED ：多頭排列成立中，但RSI>70(W1)或KD高檔死叉(W2)同時出現——漲多有過熱疑慮。
+     EXTENDED   ：多頭排列成立中，價格乖離EMA20已經放大到8%以上，或已經站上20日高點——
+                  漲了一段、離安全的加碼區已經有點遠，還沒到過熱等級但追價風險上升。
+     CONFIRMED  ：多頭排列成立(EMA20>EMA60且價格>=EMA20)且Investment Signal Score>=70。
+     WATCH      ：Score落在50~69(中性/中性偏多區)。
+     FORMING    ：以上皆不成立，通常是盤整、方向未明、還在打底階段(預設值)。
+*/
+function deriveSignalState(t){
+  if(t.insufficient || !t.closes || t.closes.length===0) return null;
+  const core = computeSignalEngine(t);
+  const warn = computeWarningSignals(t);
+  const score = computeSignalScore(t);
+  const byId = (list,id)=> list.find(s=>s.id===id);
+  const s1=byId(core,'S1'), s2=byId(core,'S2'), s4=byId(core,'S4');
+  const w1=byId(warn,'W1'), w2=byId(warn,'W2');
+
+  const bullish = (t.ema20v!=null && t.ema60v!=null && t.price!=null) ? (t.ema20v>t.ema60v && t.price>=t.ema20v) : false;
+  const bearish = (t.ema20v!=null && t.ema60v!=null && t.price!=null) ? (t.ema20v<t.ema60v && t.price<t.ema60v) : false;
+
+  const def = {code:'FORMING', label:'盤整打底', emoji:'⚪', desc:'方向尚未明朗，訊號/分數都還在中性或偏弱區，屬於觀察等待階段。'};
+  if((s4 && s4.triggered) || bearish){
+    return {code:'FAILED', label:'趨勢失效', emoji:'🔴', desc:'空頭排列已成立(EMA20<EMA60且價格<EMA60)，或趨勢反轉訊號(S4)本日觸發，加碼計畫應視為取消，持有部位建議重新檢視風險。'};
+  }
+  if((s1 && s1.triggered) || (s2 && s2.triggered)){
+    return {code:'TRIGGERED', label:'訊號觸發', emoji:'🟢', desc:`${s1&&s1.triggered?'超跌反轉(S1)':'動能啟動(S2)'}本日全部條件成立，是剛出現的進場訊號，非追高，建議依你設定的規則分批操作。`};
+  }
+  if(bullish && ((w1&&w1.triggered) || (w2&&w2.triggered))){
+    return {code:'OVERHEATED', label:'過熱警示', emoji:'🟠', desc:`多頭排列中，但${w1&&w1.triggered?'RSI已超過70':''}${(w1&&w1.triggered&&w2&&w2.triggered)?'，且':''}${w2&&w2.triggered?'KD高檔死叉':''}，短線過熱，不建議追價，可等回檔。`};
+  }
+  if(bullish && t.priceVsEma20Pct!=null && (t.priceVsEma20Pct>=8 || (t.h20v!=null && t.price>=t.h20v))){
+    return {code:'EXTENDED', label:'漲多乖離', emoji:'🟡', desc:`多頭排列中，價格乖離EMA20已達${fmt(t.priceVsEma20Pct,1)}%，或已站上20日高點，追價風險上升，建議等拉回或分批處理。`};
+  }
+  if(bullish && score && score.total>=70){
+    return {code:'CONFIRMED', label:'趨勢確認', emoji:'🟢', desc:'多頭排列成立且Investment Signal Score落在偏多區間(≥70)，趨勢相對健康，可持有或逢拉回小幅加碼。'};
+  }
+  if(score && score.total>=50 && score.total<70){
+    return {code:'WATCH', label:'觀察等待', emoji:'🟡', desc:'Investment Signal Score落在中性區間，多空未明，建議先觀察、等更明確的訊號再動作。'};
+  }
+  return def;
+}
+function renderSignalStateBadge(t){
+  const st = deriveSignalState(t);
+  if(!st) return '';
+  const cls = {FAILED:'exit', TRIGGERED:'entry', CONFIRMED:'entry', OVERHEATED:'watch', EXTENDED:'watch', WATCH:'watch', FORMING:'neutral'}[st.code] || 'neutral';
+  return `<span class="ai-verdict-badge ${cls}" title="${st.desc.replace(/"/g,'&quot;')}">${st.emoji} ${st.code}｜${st.label}</span>`;
+}
+
 function renderSignalScoreCard(t){
   const s = computeSignalScore(t);
   if(!s){
@@ -1547,15 +1696,138 @@ function renderSignalScoreCard(t){
   const rows = s.breakdown.map(b=>`
     <div class="score-row"><span class="score-cat">${b.name}</span><span class="score-bar-wrap"><span class="score-bar" style="width:${(b.score/b.max*100).toFixed(0)}%"></span></span><span class="score-val">+${b.score}/${b.max}</span></div>
     ${b.note?`<div class="score-note">${b.note}</div>`:''}`).join('');
+  const stateBadge = renderSignalStateBadge(t);
   return `
   <div class="ai-score-card">
     <div class="ai-verdict-title">🎯 Investment Signal Score</div>
     <div class="score-total-row">
       <span class="score-total-num">${s.total}<span class="score-total-max">/100</span></span>
       <span class="ai-verdict-badge ${s.tier.level}">${s.tier.emoji} ${s.tier.label}</span>
+      ${stateBadge}
     </div>
     <div class="score-action">建議：${s.tier.action}（僅供參考、不構成投資建議）</div>
     <div class="score-breakdown">${rows}</div>
+  </div>`;
+}
+
+/* ---------- 2026-09新增：距離加碼點(Add Zone)。規則式從既有EMA20/EMA60/20日高低
+   推導出「拉回承接區/突破觸發價/停損觀察價」三個參考價位，純數學公式、不呼叫AI：
+     pullback_zone   = EMA20 ± 0.5%（拉回測試EMA20支撐的合理區間）
+     breakout_trigger = max(20日高, 現價) × 1.005（站上20日高再加一點緩衝，避免假突破）
+     stop_level      = EMA60 × 0.98（跌破EMA60打個2%緩衝，跟這份檔案既有標的的
+                       「跌破EMA60→出清/減碼」規則語意一致，不是另外發明一套邏輯）
+   這是規則式試算參考，不是AI生成、也不是投資建議，數字僅供你自己排定分批操作的
+   價位參考，可自行覆蓋。
+*/
+function computeAddZone(t){
+  if(t.insufficient || t.price==null || t.ema20v==null || t.ema60v==null) return null;
+  const pullbackLow = t.ema20v*0.995, pullbackHigh = t.ema20v*1.005;
+  const breakoutTrigger = Math.max(t.h20v||0, t.price) * 1.005;
+  const stopLevel = t.ema60v*0.98;
+  const price = t.price;
+
+  let narrative;
+  if(price < stopLevel){
+    narrative = `目前 ${fmt(price,2)}，已經跌破停損觀察價 ${fmt(stopLevel,2)}，加碼計畫應視為取消，持有部位建議重新檢視是否減碼。`;
+  } else if(price >= breakoutTrigger){
+    narrative = `目前 ${fmt(price,2)}，已站上突破觸發價 ${fmt(breakoutTrigger,2)}，若成交量能同步放大確認，可考慮順勢加碼。`;
+  } else if(price >= pullbackLow && price <= pullbackHigh){
+    narrative = `目前 ${fmt(price,2)}，落在拉回承接區 ${fmt(pullbackLow,2)}～${fmt(pullbackHigh,2)} 內，可考慮分批進場。`;
+  } else if(price > pullbackHigh){
+    narrative = `目前 ${fmt(price,2)}，介於拉回承接區(${fmt(pullbackLow,2)}～${fmt(pullbackHigh,2)})與突破觸發價(${fmt(breakoutTrigger,2)})之間，不追價，等回測拉回區或站穩突破價再行動。`;
+  } else {
+    narrative = `目前 ${fmt(price,2)}，低於拉回承接區(${fmt(pullbackLow,2)}起)但尚未跌破停損觀察價 ${fmt(stopLevel,2)}，屬於觀察區，非建議加碼點。`;
+  }
+  return {pullbackLow, pullbackHigh, breakoutTrigger, stopLevel, narrative};
+}
+/* ---------- 2026-09新增：市場狀態層(Market Regime)，先只在大盤指數TAIEX試驗。
+   跟上面deriveSignalState同樣是規則式(不呼叫AI)，但衡量的是「大盤整體氣氛」而不是
+   單一標的的進出場階段：Trend_State看均線排列，Momentum_State看MACD柱狀體走勢+RSI，
+   Market_Regime再綜合這兩者判斷「現在是多頭/空頭/區間，還是正在轉折」。
+   之所以先只套用在TAIEX(tab==='idx')：這是使用者明確要求「先僅在TAIEX試驗」，
+   等好用再考慮擴大到個股/ETF，程式上刻意不影響其他任何既有分數/訊號的計算。
+*/
+function computeMarketRegime(t){
+  if(t.insufficient || !t.closes || t.closes.length<3) return null;
+  const n=t.closes.length, i=n-1;
+  const rsiNow=t.rsiArr[i];
+  const emaNow=t.ema20[i], ema60Now=t.ema60[i];
+  const oscNow=t.macd.osc[i], oscY1=t.macd.osc[i-1];
+  const difNow=t.macd.dif[i], deaNow=t.macd.dea[i];
+  const gapPct=t.ema20VsEma60Pct;
+
+  let trendState;
+  if(emaNow==null||ema60Now==null||t.price==null){ trendState='NEUTRAL'; }
+  else if(t.price>=emaNow && emaNow>ema60Now && gapPct!=null && gapPct>=2) trendState='STRONG_BULL';
+  else if(t.price>=emaNow && emaNow>ema60Now) trendState='BULL';
+  else if(t.price<emaNow && emaNow<ema60Now && gapPct!=null && gapPct<=-2) trendState='STRONG_BEAR';
+  else if(t.price<emaNow && emaNow<ema60Now) trendState='BEAR';
+  else trendState='NEUTRAL';
+
+  const rising = (oscNow!=null && oscY1!=null && oscNow>oscY1);
+  const falling = (oscNow!=null && oscY1!=null && oscNow<oscY1);
+  let momentumState;
+  if(oscNow!=null && oscNow>0 && rising && rsiNow!=null && rsiNow>60) momentumState='STRONG';
+  else if(rising || (difNow!=null && deaNow!=null && difNow>deaNow)) momentumState='IMPROVING';
+  else if(falling) momentumState='WEAKENING';
+  else momentumState='NEUTRAL';
+
+  let regime;
+  if(trendState==='STRONG_BULL'||trendState==='BULL'){
+    regime = momentumState==='WEAKENING' ? 'TRANSITION' : 'BULL';
+  } else if(trendState==='STRONG_BEAR'||trendState==='BEAR'){
+    regime = (momentumState==='IMPROVING'||momentumState==='STRONG') ? 'TRANSITION' : 'BEAR';
+  } else {
+    regime = (momentumState==='STRONG'||momentumState==='IMPROVING'||momentumState==='WEAKENING') ? 'TRANSITION' : 'RANGE';
+  }
+  return {regime, trendState, momentumState};
+}
+function renderMarketRegimeCard(t){
+  const r = computeMarketRegime(t);
+  if(!r) return '';
+  const regimeColor={BULL:'entry',BEAR:'exit',RANGE:'neutral',TRANSITION:'watch'};
+  const trendColor={STRONG_BULL:'entry',BULL:'entry',NEUTRAL:'neutral',BEAR:'exit',STRONG_BEAR:'exit'};
+  const momentumColor={STRONG:'entry',IMPROVING:'watch',NEUTRAL:'neutral',WEAKENING:'exit'};
+  const strategyText={
+    BULL:'多方格局，可持有／逢拉回分批加碼',
+    BEAR:'空方格局，建議降低曝險、以防守為主',
+    RANGE:'區間震盪，可考慮高出低進的區間操作，不追高殺低',
+    TRANSITION:'趨勢與動能出現分歧，可能正在轉折，建議降低操作頻率、等訊號更明確再動作',
+  }[r.regime] || '';
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">🌐 市場狀態層 Market Regime（試驗中，僅在大盤指數TAIEX顯示，規則式判斷、非AI生成）</div>
+    <div class="score-total-row">
+      <span class="ai-verdict-badge ${regimeColor[r.regime]}">Market_Regime：${r.regime}</span>
+      <span class="ai-verdict-badge ${trendColor[r.trendState]}">Trend_State：${r.trendState}</span>
+      <span class="ai-verdict-badge ${momentumColor[r.momentumState]}">Momentum_State：${r.momentumState}</span>
+    </div>
+    <div class="score-action">${strategyText}</div>
+    <div class="score-note" style="margin-top:6px;">這是規則式判斷(從RSI/EMA20/EMA60/MACD推導)，先在大盤指數TAIEX試驗這個「市場狀態層」概念，還沒套用到個股/ETF，也不影響上面其他分數/訊號的計算，純粹先讓你看看這個分類方式好不好用，之後可以再討論要不要擴大套用。</div>
+  </div>`;
+}
+
+function renderAddZoneCard(t){
+  const z = computeAddZone(t);
+  if(!z){
+    return '';
+  }
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">📍 距離加碼點（規則式試算，非AI生成、非投資建議，可自行覆蓋）</div>
+    <div class="score-note" style="margin:0 0 8px 0;">
+      Price_vs_EMA20：<b>${t.priceVsEma20Pct!=null?(t.priceVsEma20Pct>=0?'+':'')+fmt(t.priceVsEma20Pct,1)+'%':'--'}</b>
+      Price_vs_EMA60：<b>${t.priceVsEma60Pct!=null?(t.priceVsEma60Pct>=0?'+':'')+fmt(t.priceVsEma60Pct,1)+'%':'--'}</b>
+      EMA20_vs_EMA60：<b>${t.ema20VsEma60Pct!=null?(t.ema20VsEma60Pct>=0?'+':'')+fmt(t.ema20VsEma60Pct,1)+'%':'--'}</b>
+    </div>
+    <table class="sig-matrix" style="margin-bottom:8px;">
+      <tbody>
+        <tr><td>拉回承接區 pullback_zone</td><td>${fmt(z.pullbackLow,2)} ～ ${fmt(z.pullbackHigh,2)}</td></tr>
+        <tr><td>突破觸發價 breakout_trigger</td><td>${fmt(z.breakoutTrigger,2)}</td></tr>
+        <tr><td>停損觀察價 stop_level</td><td>${fmt(z.stopLevel,2)}</td></tr>
+      </tbody>
+    </table>
+    <div class="score-action">${z.narrative}</div>
   </div>`;
 }
 
@@ -1771,6 +2043,8 @@ function renderStockSection(t, tab){
       <span class="pill ${triggered?'trig':'none'}">${triggered?trigs.length+'項觸發':'無觸發'}</span>
     </div>
 
+    ${tab==='idx' ? renderMarketRegimeCard(t) : ''}
+
     <div class="tech-grid">
       <div class="tech-cell"><div class="lbl">收盤${isUSD?'(USD)':''}</div><div class="val">${priceFmt(t)}</div></div>
       <div class="tech-cell"><div class="lbl">漲跌幅</div><div class="val">${pctBadge(t.pct)}</div></div>
@@ -1808,6 +2082,7 @@ function renderStockSection(t, tab){
     <div class="chart-block"><div class="chart-title">RSI(14)（Wilder 平滑，虛線為 70/30）</div><canvas id="rsi_${cfg.symbol}_${tab}" height="80"></canvas></div>
     <div class="chart-block"><div class="chart-title">MACD(12,26,9)</div><canvas id="macd_${cfg.symbol}_${tab}" height="80"></canvas></div>
     <div class="chart-block"><div class="chart-title">KD(9,3,3) 日（虛線為 80/20）</div><canvas id="kd_${cfg.symbol}_${tab}" height="80"></canvas></div>
+    <div class="chart-block"><div class="chart-title">布林通道寬度 Bollinger Bandwidth(20,2)：數值越小＝盤整壓縮／打底，數值放大＝突破爆發</div><canvas id="bbw_${cfg.symbol}_${tab}" height="70"></canvas></div>
 
     ${deepHtml}
     ${chipHtml}
@@ -1818,7 +2093,8 @@ function renderStockSection(t, tab){
       <ul>${adviceItems}</ul>
       <div class="advice-title" style="margin-top:12px;">🤖 AI訊號摘要（進出場引擎＋風險提醒，即時計算，非投資建議）</div>
       ${renderSignalScoreCard(t)}
-      <div class="score-note" style="margin:-6px 0 10px 0;">↑ 這是連續分數評分模型（5大類加權），跟下面「AI技術面判斷」（4+4訊號矩陣的條件式判斷）是兩套獨立邏輯，衡量角度不同，數字/燈號不完全一致是正常的，建議互相參考、不要只看單一數字。</div>
+      <div class="score-note" style="margin:-6px 0 10px 0;">↑ 這是連續分數評分模型（5大類加權），跟下面「AI技術面判斷」（4+4訊號矩陣的條件式判斷）是兩套獨立邏輯，衡量角度不同，數字/燈號不完全一致是正常的，建議互相參考、不要只看單一數字。上方徽章旁邊多顯示的FORMING/WATCH/TRIGGERED/CONFIRMED/EXTENDED/OVERHEATED/FAILED是另一層「目前處在哪個階段」的規則式判斷，滑鼠移上去可以看判斷依據。</div>
+      ${renderAddZoneCard(t)}
       ${renderAiVerdictCard(allSignalsForBoxes)}
       <div class="factor-section-title">目前成立／接近成立的訊號明細</div>
       <ul>${renderAdviceSignalSummary(allSignalsForBoxes)}</ul>
@@ -1985,7 +2261,22 @@ function buildCharts(t, tab){
     options:{...common, scales:{...common.scales, y:{min:0,max:100,ticks:{font:{size:9}}}}}
   });
 
-  syncChartsCrosshair([priceChart, rsiChart, macdChart, kdChart]);
+  // 布林通道寬度：純線圖，數值收斂(通道變窄)代表盤整打底，數值放大(通道變寬)代表突破爆發，
+  // 用一條虛線標示「近60日中位數」當作粗略的「窄/寬」參考基準，不是精確的統計門檻，
+  // 只是讓你一眼看出目前寬度相對這檔標的自己的歷史是偏窄還是偏寬。
+  const bbwRecent = t.bbw.filter(v=>v!=null).slice(-60);
+  const bbwMedian = bbwRecent.length ? bbwRecent.slice().sort((a,b)=>a-b)[Math.floor(bbwRecent.length/2)] : null;
+  const bbwMedianLine = dates.map(()=>bbwMedian);
+  const bbwChart = new Chart(document.getElementById('bbw_'+id), {
+    type:'line',
+    data:{labels:dates, datasets:[
+      {label:'Bollinger Bandwidth(%)',data:t.bbw,borderColor:'#7b3fe4',borderWidth:1.4,pointRadius:0,fill:false},
+      {label:'近60日中位數(參考)',data:bbwMedianLine,borderColor:'#aaa',borderWidth:1,borderDash:[3,3],pointRadius:0},
+    ]},
+    options:{...common, scales:{...common.scales, y:{ticks:{font:{size:9}}}}}
+  });
+
+  syncChartsCrosshair([priceChart, rsiChart, macdChart, kdChart, bbwChart]);
 }
 
 function calcPE(symbol){
