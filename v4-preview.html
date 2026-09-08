@@ -497,6 +497,75 @@ function bollingerBandwidthSeries(closes, period){
   }
   return out;
 }
+/* ---------- 2026-09新增：市場結構判讀(HH/HL多頭 vs LH/LL空頭)，參考ROCKETSTOCK報告的
+   SMC/市場結構判讀概念，純粹用價格高低點序列推導，不需要額外資料源。
+   做法：用「擺動高低點(swing high/low)」——某一天的最高價比左右各k天都高，就算一個
+   擺動高點；最低價比左右各k天都低，就算一個擺動低點。再比較「最近一次」跟「上一次」
+   擺動高點/低點的相對位置：兩個都墊高(HH+HL)＝多頭結構；兩個都創新低(LH+LL)＝空頭結構；
+   方向不一致＝結構不明確(可能正在轉折)。這是精簡版，不含真正SMC/ICT的FVG、Order Block
+   這類進階概念，先做「結構定調」這一層，之後真的有需要再往下加細節。 */
+function findSwingPoints(highs, lows, k){
+  k = k||3;
+  const swingHighs=[], swingLows=[];
+  for(let i=k;i<highs.length-k;i++){
+    let isHigh=true, isLow=true;
+    for(let j=i-k;j<=i+k;j++){
+      if(j===i) continue;
+      if(highs[j]>=highs[i]) isHigh=false;
+      if(lows[j]<=lows[i]) isLow=false;
+    }
+    if(isHigh) swingHighs.push({i, price:highs[i]});
+    if(isLow) swingLows.push({i, price:lows[i]});
+  }
+  return {swingHighs, swingLows};
+}
+function computeMarketStructure(t){
+  if(t.insufficient || !t.highs || t.highs.length<20) return null;
+  const {swingHighs, swingLows} = findSwingPoints(t.highs, t.lows, 3);
+  if(swingHighs.length<2 || swingLows.length<2){
+    return {structure:'unknown', label:'資料不足(近期波段高低點還不夠多，需要更長的價格歷史)'};
+  }
+  const lastHigh=swingHighs[swingHighs.length-1], prevHigh=swingHighs[swingHighs.length-2];
+  const lastLow=swingLows[swingLows.length-1], prevLow=swingLows[swingLows.length-2];
+  const higherHigh = lastHigh.price > prevHigh.price;
+  const higherLow = lastLow.price > prevLow.price;
+  let structure, label;
+  if(higherHigh && higherLow){ structure='bullish'; label='多頭結構(HH+HL)：波段高點持續墊高，拉回也守在前一個低點之上'; }
+  else if(!higherHigh && !higherLow){ structure='bearish'; label='空頭結構(LH+LL)：反彈過不了前波高點，且持續創低'; }
+  else { structure='mixed'; label='結構不明確：高點/低點方向不一致，可能正在轉折，建議多觀察幾天'; }
+  return {structure, label, lastHigh, prevHigh, lastLow, prevLow};
+}
+
+/* ---------- 2026-09新增：RS Rating(相對強度百分位)，參考IBD RS Rating的精神簡化版：
+   算每檔標的近期(預設60個交易日≈3個月)報酬，扣掉同期間大盤(^TWII)報酬，得到「超額
+   報酬(alpha)」，再把所有台股標的的alpha由小到大排序，轉成1~99百分位(業界慣例，
+   數字越高代表這段期間比大盤強、相對強度越高)。這是「單一期間簡化版」，不是IBD原始
+   4季加權的完整版本(因為不少新加入標的價格歷史還不夠長，硬套4季加權反而會因為資料
+   不足產生更多空值，先用單一期間版本，之後標的歷史都累積夠長，可以再改成分季加權)。
+   只適用台股標的(跟大盤同一個市場才有比較意義)，美股(NVDA/GOOG)沒有對應的美股大盤
+   資料源，這裡先不計算，留null。 */
+function computeRsRatings(results, indexTicker){
+  if(!indexTicker || indexTicker.insufficient) return;
+  const LOOKBACK = 60;
+  const periodReturn = (closes) => {
+    const n = closes.length;
+    const win = Math.min(LOOKBACK, n-1);
+    if(win < 10) return null; // 資料太少(不到10個交易日)不計算，避免雜訊
+    return (closes[n-1]-closes[n-1-win])/closes[n-1-win]*100;
+  };
+  const benchRet = periodReturn(indexTicker.closes);
+  const eligible = results.filter(t=>!t.insufficient && t.cfg.tab!=='idx' && t.cfg.currency!=='USD');
+  eligible.forEach(t=>{
+    const ret = periodReturn(t.closes);
+    t.rsAlpha = (ret!=null && benchRet!=null) ? ret-benchRet : null;
+  });
+  const withAlpha = eligible.filter(t=>t.rsAlpha!=null).sort((a,b)=>a.rsAlpha-b.rsAlpha);
+  const n = withAlpha.length;
+  withAlpha.forEach((t,i)=>{
+    t.rsRating = n<=1 ? 50 : Math.round(1 + i/(n-1)*98);
+  });
+}
+
 // 跟 dashboard.html 的模組化評價模型、check_triggers.py 的PE百分位判斷用同一套算法，三邊口徑一致。
 function percentile(sortedAsc, p) {
   if (!sortedAsc || sortedAsc.length === 0) return null;
@@ -953,8 +1022,11 @@ function priceFmtV(t,v,d){ const prefix = t.cfg.currency==='USD' ? '$' : ''; ret
 /* ---------- 抓單一標的的所有真實資料 ---------- */
 async function fetchTickerRaw(symbol){
   const [priceRes, valRes, chipRes, etfRes, divRes, obRes, finRes, cfRes, estRes, instRes] = await Promise.all([
-    supabaseClient.from('daily_price').select('trade_date,open,high,low,close').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(300),
-    supabaseClient.from('valuation').select('pe_ratio,trade_date').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1500),
+    // rsi14/kd_k/kd_d/macd_*這幾欄是main.py那邊Python算好存的(server端版本)，只用來給
+    // 「資料一致性驗算」拿去跟前端這裡自己重算的版本比對，圖表本身還是用前端重算的
+    // emaSeries/rsiSeries/kdSeries/macdSeries(維持原本架構不變，只是多抓這幾欄來對照)。
+    supabaseClient.from('daily_price').select('trade_date,open,high,low,close,rsi14,kd_k,kd_d,macd_dif,macd_signal,macd_hist').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(300),
+    supabaseClient.from('valuation').select('pe_ratio,pb_ratio,dividend_yield_pct,trade_date').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1500),
     supabaseClient.from('chip_flow').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(5),
     supabaseClient.from('etf_valuation').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1),
     supabaseClient.from('dividend_fill').select('*').eq('stock_id',symbol).order('ex_date',{ascending:false}).limit(6),
@@ -1052,13 +1124,29 @@ function computeTicker(cfg, raw){
   t.priceVsEma60Pct = (t.price!=null && t.ema60v) ? (t.price-t.ema60v)/t.ema60v*100 : null;
   t.ema20VsEma60Pct = (t.ema20v!=null && t.ema60v) ? (t.ema20v-t.ema60v)/t.ema60v*100 : null;
 
+  // 資料一致性驗算的容器，先在這裡初始化(空陣列)，下面ETF折溢價區塊跟後面RSI/KD/MACD
+  // 區塊都會往這裡push，兩處共用同一個陣列。
+  t.consistencyWarnings = [];
+
   // 機構持股(目前只有衛星(3)海外個股型NVDA/GOOG會有資料，其餘標的自然是null)
   if(raw.instRows && raw.instRows.length>0){
     t.institutional = processInstitutional(raw.instRows);
   }
 
   // ETF淨值/折溢價
-  if(raw.etfRow){ t.premiumDiscount = raw.etfRow.premium_discount_pct!=null?Number(raw.etfRow.premium_discount_pct):null; t.pdDate = raw.etfRow.trade_date; }
+  if(raw.etfRow){
+    t.premiumDiscount = raw.etfRow.premium_discount_pct!=null?Number(raw.etfRow.premium_discount_pct):null;
+    t.pdDate = raw.etfRow.trade_date;
+    // 資料一致性驗算：折溢價%欄位本身就是(市價-淨值)/淨值算出來的，這裡順手用market_price/nav
+    // 反推重算一次，理論上要對得起來；對不起來代表寫入DB那個當下的公式版本可能跟現在不同，
+    // 或有其他資料源混雜，值得留意(不代表現在這筆一定是錯的)。
+    if(raw.etfRow.market_price!=null && raw.etfRow.nav!=null && Number(raw.etfRow.nav)!==0){
+      const recomputed = (Number(raw.etfRow.market_price)-Number(raw.etfRow.nav))/Number(raw.etfRow.nav)*100;
+      if(t.premiumDiscount!=null && Math.abs(recomputed-t.premiumDiscount) > 0.3){
+        t.consistencyWarnings.push(`折溢價%：DB存的值${t.premiumDiscount.toFixed(2)}% vs 用market_price/nav重算${recomputed.toFixed(2)}%，差${Math.abs(recomputed-t.premiumDiscount).toFixed(2)}(容忍門檻0.3)`);
+      }
+    }
+  }
 
   // 填息天數（近幾次除息事件的平均，只算已填息完成的；還沒填息的不計入平均但會另外顯示筆數）
   if(raw.divRows && raw.divRows.length>0){
@@ -1100,6 +1188,52 @@ function computeTicker(cfg, raw){
   } else {
     t.peHistCount = peValues.length;
   }
+
+  // PB百分位、殖利率百分位：跟PE百分位同一套算法(peRankOf/percentile)，只是換一個欄位，
+  // 湊成「三方估值百分位比較」——三個角度都同意「便宜/合理/偏貴」時，比單看PE一個指標
+  // 更有參考價值(跟ROCKETSTOCK報告的三方估值比較同樣的邏輯，只是我們沒有股數/FCF資料
+  // 做真正的DCF，改用同一份valuation歷史資料的三個欄位做相對估值三角驗證)。
+  const pbValues = raw.valRows.map(r=>r.pb_ratio).filter(v=>v!=null).map(Number).sort((a,b)=>a-b);
+  const currentPbRow = raw.valRows.find(r=>r.pb_ratio!=null);
+  const currentPb = currentPbRow ? Number(currentPbRow.pb_ratio) : null;
+  t.pbHistCount = pbValues.length;
+  if(pbValues.length>=20){
+    t.pbRank = peRankOf(pbValues, currentPb);
+    t.pbBands = {p25:percentile(pbValues,25), p50:percentile(pbValues,50), p75:percentile(pbValues,75), p90:percentile(pbValues,90)};
+  }
+
+  // 殖利率百分位的方向跟PE/PB相反：殖利率是「數字越高代表相對自己歷史越便宜」
+  // (股價相對配息偏低才會讓殖利率衝高)，PE/PB則是「數字越高代表越貴」。這裡故意
+  // 不共用同一個「rank越高越貴」的敘事，顯示時要分開下文字，避免看反。
+  const yieldValues = raw.valRows.map(r=>r.dividend_yield_pct).filter(v=>v!=null).map(Number).sort((a,b)=>a-b);
+  const currentYieldRow = raw.valRows.find(r=>r.dividend_yield_pct!=null);
+  const currentYield = currentYieldRow ? Number(currentYieldRow.dividend_yield_pct) : null;
+  t.yieldHistCount = yieldValues.length;
+  if(yieldValues.length>=20){
+    t.yieldRank = peRankOf(yieldValues, currentYield);
+    t.yieldBands = {p25:percentile(yieldValues,25), p50:percentile(yieldValues,50), p75:percentile(yieldValues,75), p90:percentile(yieldValues,90)};
+  }
+
+  // 資料一致性驗算(2026-09新增)：daily_price裡的rsi14/kd_k/kd_d/macd_*是main.py那邊
+  // Python版indicators.py算好存進DB的「server端版本」，跟前端這裡用emaSeries/rsiSeries/
+  // kdSeries/macdSeries重新算一次的「client端版本」，理論上兩邊公式一致、數字應該很接近
+  // (小數點誤差可以接受，落差太大代表某一邊的公式或資料源可能有問題，值得你注意)。
+  // 只有落差超過容忍門檻才會產生警示，正常情況下這裡會是空陣列、畫面上完全不顯示，
+  // 跟ROCKETSTOCK報告的「資料一致性驗算」同樣的精神：列出來不代表一定錯，但代表
+  // 兩個來源對不起來，該留意。
+  const lastRow = rows[rows.length-1];
+  const checkClose = (label, serverVal, clientVal, tol) => {
+    if(serverVal==null || clientVal==null) return;
+    const diff = Math.abs(Number(serverVal)-clientVal);
+    if(diff > tol){
+      t.consistencyWarnings.push(`${label}：DB存的值${Number(serverVal).toFixed(2)} vs 前端重算${clientVal.toFixed(2)}，差${diff.toFixed(2)}(容忍門檻${tol})`);
+    }
+  };
+  checkClose('RSI14', lastRow.rsi14, rsiArr[last], 3);
+  checkClose('KD.K', lastRow.kd_k, kd.k[last], 5);
+  checkClose('KD.D', lastRow.kd_d, kd.d[last], 5);
+  checkClose('MACD.DIF', lastRow.macd_dif, macd.dif[last], Math.max(0.5, Math.abs(macd.dif[last]||0)*0.15));
+  checkClose('MACD.柱狀', lastRow.macd_hist, macd.osc[last], Math.max(0.5, Math.abs(macd.osc[last]||0)*0.15));
 
   // 財報/現金流（供t4深度區塊，附QoQ/YoY計算）
   if(raw.finRows && raw.finRows.length>0){
@@ -1449,10 +1583,17 @@ function overviewSignalBadges(t){
   return `<div class="ai-badge-cell">${on.map(s=>`<span class="ai-sig-pill ${s.direction}">${s.emoji}${s.name}</span>`).join('')}</div>`;
 }
 function overviewScoreBadge(t){
-  // 總覽/各分頁表格「Score」欄位：顯示Investment Signal Score總分+燈號，跟computeSignalScore()同一套邏輯
+  // 總覽/各分頁表格「Score」欄位：顯示Investment Signal Score總分+燈號，跟computeSignalScore()同一套邏輯。
+  // 2026-09新增：分數旁邊順便帶出RS Rating(相對大盤60日超額報酬百分位)小徽章，沒有計算出來
+  // (美股標的、或資料不足)時就不顯示，不佔版面。
   const s = computeSignalScore(t);
-  if(!s) return '<span style="color:#9aa0a8">--</span>';
-  return `<span class="score-badge ${s.tier.level}">${s.tier.emoji} ${s.total}</span>`;
+  const scorePart = s ? `<span class="score-badge ${s.tier.level}">${s.tier.emoji} ${s.total}</span>` : '<span style="color:#9aa0a8">--</span>';
+  let rsPart = '';
+  if(t.rsRating!=null){
+    const rsCls = t.rsRating>=70 ? 'entry' : (t.rsRating>=40 ? 'watch' : 'exit');
+    rsPart = ` <span class="score-badge ${rsCls}" title="RS Rating：近60個交易日報酬相對大盤(TAIEX)的超額報酬百分位，數字越高代表這段期間比大盤強">RS${t.rsRating}</span>`;
+  }
+  return scorePart + rsPart;
 }
 
 /* ---------- 2026-08-24新增：把AI訊號結果串進「進場/出場觸發條件」草案框 + 「投資建議」區塊 ----------
@@ -1831,6 +1972,66 @@ function renderAddZoneCard(t){
   </div>`;
 }
 
+/* ---------- 2026-09新增：以下3個render函式，是參考ROCKETSTOCK網站分析報告
+   (使用者提供的第三方範例，https://rocketstock.zeabur.app/fundamental-track-public/AVGO)
+   取其優點、改用現有資料規則式重算的版本，經AskUserQuestion讓使用者勾選後才實作：
+   ①市場結構(HH/HL vs LH/LL) ②PE/PB/殖利率三方估值百分位比較(簡化版DCF替代方案)
+   ③資料一致性驗算(client端重算 vs DB存值互相對照)。全部都是規則式計算，不呼叫AI，
+   跟這份檔案既有的computeSignalScore/computeMarketRegime同一套設計哲學。
+*/
+function renderMarketStructureCard(t){
+  const ms = computeMarketStructure(t);
+  if(!ms) return '';
+  const colorMap = {bullish:'entry', bearish:'exit', mixed:'watch', unknown:'neutral'};
+  const cls = colorMap[ms.structure] || 'neutral';
+  const detail = (ms.structure!=='unknown' && ms.lastHigh && ms.prevHigh && ms.lastLow && ms.prevLow)
+    ? `<div class="score-note" style="margin-top:6px;">近兩個波段高點：${fmt(ms.prevHigh.price,2)} → ${fmt(ms.lastHigh.price,2)}；近兩個波段低點：${fmt(ms.prevLow.price,2)} → ${fmt(ms.lastLow.price,2)}（波段高低點以左右3根K棒的簡易pivot演算法偵測，是SMC/ICT市場結構概念的簡化版，僅供參考）</div>`
+    : '';
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">📐 市場結構 Market Structure（規則式判讀，非AI生成）</div>
+    <div class="score-total-row">
+      <span class="ai-verdict-badge ${cls}">${ms.structure.toUpperCase()}</span>
+    </div>
+    <div class="score-action">${ms.label}</div>
+    ${detail}
+  </div>`;
+}
+
+function renderValuationTriangulationCard(t){
+  if(t.peRank==null && t.pbRank==null && t.yieldRank==null) return '';
+  const row = (label, rank, bands, histCount, inverted) => {
+    if(rank==null) return `<tr><td>${label}</td><td colspan="2">資料不足（僅${histCount||0}筆估值歷史，需至少20筆才會計算百分位）</td></tr>`;
+    const desc = inverted
+      ? (rank>=70?'相對便宜（殖利率偏高）':rank<=30?'相對偏貴（殖利率偏低）':'中性')
+      : (rank>=70?'相對偏貴':rank<=30?'相對便宜':'中性');
+    return `<tr><td>${label}</td><td>目前百分位 ${rank.toFixed(0)}%（${desc}）</td><td>P25 ${fmt(bands.p25,2)} ／ P50 ${fmt(bands.p50,2)} ／ P75 ${fmt(bands.p75,2)} ／ P90 ${fmt(bands.p90,2)}</td></tr>`;
+  };
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">💰 估值三方比較（PE／PB／殖利率百分位，規則式計算）</div>
+    <table class="sig-matrix" style="margin-bottom:8px;">
+      <tbody>
+        ${row('本益比 PE 百分位', t.peRank, t.peBands, t.peHistCount, false)}
+        ${row('股價淨值比 PB 百分位', t.pbRank, t.pbBands, t.pbHistCount, false)}
+        ${row('殖利率百分位', t.yieldRank, t.yieldBands, t.yieldHistCount, true)}
+      </tbody>
+    </table>
+    <div class="score-note">這是「這檔標的自己的估值歷史分布位置」百分位比較，不是真正的DCF現金流折現模型——目前資料源沒有股數/自由現金流細節，無法算出真正的每股DCF估值，僅供跟自己歷史區間相對比較，不是絕對合理價。特別注意殖利率的方向跟PE／PB相反：殖利率百分位越高代表股價相對越便宜，PE／PB百分位越高則代表相對越貴，請不要用同一套「數字越高越貴」的直覺解讀殖利率那一列。</div>
+  </div>`;
+}
+
+function renderConsistencyWarnings(t){
+  if(!t.consistencyWarnings || t.consistencyWarnings.length===0) return '';
+  const items = t.consistencyWarnings.map(w=>`<li>${w}</li>`).join('');
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">⚠️ 資料一致性提醒（DB存值 vs 前端重算，差異超出容忍門檻才會顯示）</div>
+    <ul class="score-note" style="margin:4px 0 0 16px;">${items}</ul>
+    <div class="score-note" style="margin-top:6px;">通常是計算/更新時間點差異造成的正常誤差，不代表資料異常；如果同一項提醒連續多天出現，可以再進一步確認資料來源。</div>
+  </div>`;
+}
+
 function renderOverview(list){
   const body = document.getElementById('sum-t0');
   body.innerHTML = list.map(t=>{
@@ -2044,6 +2245,7 @@ function renderStockSection(t, tab){
     </div>
 
     ${tab==='idx' ? renderMarketRegimeCard(t) : ''}
+    ${renderConsistencyWarnings(t)}
 
     <div class="tech-grid">
       <div class="tech-cell"><div class="lbl">收盤${isUSD?'(USD)':''}</div><div class="val">${priceFmt(t)}</div></div>
@@ -2055,6 +2257,8 @@ function renderStockSection(t, tab){
       <div class="tech-cell"><div class="lbl">前20日低</div><div class="val">${priceFmtV(t,t.l20v,2)}</div></div>
       <div class="tech-cell"><div class="lbl">MACD DIF ／ DEA/OSC</div><div class="val" style="font-size:13px">${fmt(t.dif,2)} ／ ${fmt(t.dea,2)}/${fmt(t.osc,2)}</div></div>
     </div>
+
+    ${renderMarketStructureCard(t)}
 
     <div class="cat-grid">${catRows}</div>
 
@@ -2095,6 +2299,7 @@ function renderStockSection(t, tab){
       ${renderSignalScoreCard(t)}
       <div class="score-note" style="margin:-6px 0 10px 0;">↑ 這是連續分數評分模型（5大類加權），跟下面「AI技術面判斷」（4+4訊號矩陣的條件式判斷）是兩套獨立邏輯，衡量角度不同，數字/燈號不完全一致是正常的，建議互相參考、不要只看單一數字。上方徽章旁邊多顯示的FORMING/WATCH/TRIGGERED/CONFIRMED/EXTENDED/OVERHEATED/FAILED是另一層「目前處在哪個階段」的規則式判斷，滑鼠移上去可以看判斷依據。</div>
       ${renderAddZoneCard(t)}
+      ${renderValuationTriangulationCard(t)}
       ${renderAiVerdictCard(allSignalsForBoxes)}
       <div class="factor-section-title">目前成立／接近成立的訊號明細</div>
       <ul>${renderAdviceSignalSummary(allSignalsForBoxes)}</ul>
@@ -2566,6 +2771,7 @@ async function initApp(){
     // 用到它(它也是真實的TW交易日資料，可以當TW資料新鮮度的其中一個參考點)，
     // 所以只在「分表格/分頁籤」這一步驟排除它，不是整個從results拿掉。
     const indexTicker = results.find(t=>t.cfg.tab==='idx');
+    computeRsRatings(results, indexTicker); // 要跨標的一起算才有排名意義，所以放在Promise.all結束後、分頁分組之前
     const portfolioResults = results.filter(t=>t.cfg.tab!=='idx');
     const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[],t7:[],t8:[]};
     portfolioResults.forEach(t=>groups[t.cfg.tab].push(t));
