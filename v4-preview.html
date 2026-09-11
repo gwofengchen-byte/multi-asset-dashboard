@@ -271,9 +271,11 @@
 </header>
 <div class="freshness-bar" id="freshness-bar">
   <span class="fr-item"><b>台股資料日期：</b><span id="fresh-tw" class="fr-badge fr-neutral">--</span></span>
+  <span class="fr-item"><b>大盤指數(TAIEX)資料日期：</b><span id="fresh-idx" class="fr-badge fr-neutral">--</span></span>
   <span class="fr-item"><b>美股資料日期：</b><span id="fresh-us" class="fr-badge fr-neutral">--</span></span>
   <span class="fr-item fr-loadtime"><b>頁面載入時間：</b><span id="last-updated">--</span></span>
 </div>
+<div class="info-banner" id="fresh-lag-banner" style="display:none;background:#fff3cd;border-color:#e0b23d;"></div>
 <div class="info-banner">本頁改抓真實資料：技術面/籌碼面/估值面/填息天數/ETF折溢價/海外對標/美股機構持股皆來自 Supabase 資料庫，非隨機模擬。「資料日期」跟「頁面載入時間」是兩件事——載入時間只代表你現在打開網頁的當下，不代表股價有更新到今天，請看上方「台股/美股資料日期」欄位判斷實際資料新舊。</div>
 <div class="manual-note">⚠️ 少數欄位目前沒有自動化資料源，仍是你先前手動輸入的參考文字（內扣費用率、追蹤指數說明、選股邏輯、匯率避險狀態、NIM/資本適足率等金融股基本面），畫面上會用較淡的顏色標示，之後有資料源再串接。配置總表(核心/衛星比重)也是你自行輸入的示意數字，不是從實際持股股數換算。</div>
 
@@ -615,6 +617,27 @@ function freshnessStatus(latestDateStr, now){
     return {level:'pending', label:`${latestDateStr}（今晚20:25排程後更新，目前屬正常等待中）`};
   }
   return {level:'warn', label:`${latestDateStr}（比預期落後，建議檢查Windows工作排程器是否正常執行）`};
+}
+
+// 2026-09新增：眾數日期(出現次數最多的日期，同票數時取較新的)，用來代表「多數標的的資料日期」。
+// 原本的邏輯是取twDates陣列裡最新的一天(max)當代表值，但這個陣列裡混了TAIEX(資料源是
+// yfinance，通常比較快更新)跟其他台股個股/ETF(資料源是FinMind，免費版常常會晚1個交易日
+// 才把最新收盤資料放出來)。用max的問題是：只要TAIEX當天已經更新，整條「台股資料日期」
+// 就會顯示綠色「正常」，即使其他大多數個股/ETF其實都還停在前一個交易日，使用者完全看
+// 不出來——這正是2026-09發現「明明大盤最新、但個股卡在前一天」卻沒被任何警示抓到的根因。
+// 改用眾數，並且把TAIEX獨立移出這個陣列(見下面呼叫處)，這樣「台股資料日期」才能真正代表
+// 「這批FinMind來源的個股/ETF大多數是不是最新」，不會被資料源不同的TAIEX誤導掩蓋。
+function modeDate(dates){
+  if(!dates || dates.length===0) return null;
+  const counts = {};
+  dates.forEach(d=>{ counts[d]=(counts[d]||0)+1; });
+  let best=null, bestCount=-1;
+  Object.keys(counts).forEach(d=>{
+    if(counts[d]>bestCount || (counts[d]===bestCount && (best===null || d>best))){
+      best=d; bestCount=counts[d];
+    }
+  });
+  return best;
 }
 
 const CATLABEL = {t1:'核心(1) 指數型ETF', t2:'核心(2) 高股息ETF', t3:'核心(3) 金融股', t7:'核心(4) 債券型ETF', t4:'衛星(1) 個股型', t5:'衛星(2) 海外ETF型', t6:'衛星(3) 海外個股型', t8:'衛星(4) 趨勢成長股'};
@@ -2240,7 +2263,7 @@ function renderStockSection(t, tab){
   <div class="stock-section" id="${cfg.symbol}_${tab}">
     <div class="stock-head">
       <div><h3>${cfg.symbol} ${cfg.name}${cfg.flag?`<span class="flag">${cfg.flag}</span>`:''}</h3>
-      <div class="sub">${allFields.slice(0,2).map(f=>f[0]).join(' ／ ')}${isUSD?` ／ 資料日期(美股交易日)：${t.latestTradeDate}`:''}</div></div>
+      <div class="sub">${allFields.slice(0,2).map(f=>f[0]).join(' ／ ')}${t.latestTradeDate?` ／ 資料日期(${isUSD?'美股交易日':(tab==='idx'?'大盤指數，來源yfinance':'台股交易日，來源FinMind')})：${t.latestTradeDate}`:''}</div></div>
       <span class="pill ${triggered?'trig':'none'}">${triggered?trigs.length+'項觸發':'無觸發'}</span>
     </div>
 
@@ -2779,16 +2802,31 @@ async function initApp(){
     Object.keys(groups).forEach(tab=>renderTab(tab, groups[tab]));
     if(indexTicker) renderIndexSection(indexTicker);
 
-    // 資料日期核對機制：台股/美股分開判斷(美股本來就跟台股有時區落差，不能用同一套邏輯比對)
+    // 資料日期核對機制：台股/美股分開判斷(美股本來就跟台股有時區落差，不能用同一套邏輯比對)。
+    // 2026-09修正：「台股資料日期」的樣本刻意排除TAIEX(tab==='idx')——TAIEX走yfinance，
+    // 跟其他台股個股/ETF(FinMind來源，免費版常晚1個交易日)不是同一個資料源，混在一起用
+    // max()當代表值會被TAIEX的較新日期掩蓋，看不出其他個股其實落後。改用眾數(modeDate)
+    // 代表「多數標的的資料日期」，並且把落後的標的明確列出來，而不是只看一個顏色燈號。
     const now = new Date();
-    const twDates = results.filter(t=>!t.insufficient && t.cfg.currency!=='USD').map(t=>t.latestTradeDate).filter(Boolean).sort();
+    const twResults = results.filter(t=>!t.insufficient && t.cfg.currency!=='USD' && t.cfg.tab!=='idx');
+    const twDates = twResults.map(t=>t.latestTradeDate).filter(Boolean).sort();
     const usDates = results.filter(t=>!t.insufficient && t.cfg.currency==='USD').map(t=>t.latestTradeDate).filter(Boolean).sort();
-    const maxTwDate = twDates.length ? twDates[twDates.length-1] : null;
+    const repTwDate = modeDate(twDates);
     const maxUsDate = usDates.length ? usDates[usDates.length-1] : null;
 
-    const twStatus = freshnessStatus(maxTwDate, now);
+    const twStatus = freshnessStatus(repTwDate, now);
     $('fresh-tw').textContent = twStatus.label;
     $('fresh-tw').className = 'fr-badge fr-'+twStatus.level;
+
+    // TAIEX(大盤指數)獨立顯示自己的資料日期，不套用台股個股的核對邏輯(資料源不同，
+    // 步調本來就可能不一樣，不是異常)，純粹讓你一眼看到大盤指數目前更新到哪一天。
+    if(indexTicker && !indexTicker.insufficient && indexTicker.latestTradeDate){
+      $('fresh-idx').textContent = `${indexTicker.latestTradeDate}（yfinance來源，跟下方FinMind來源的個股/ETF可能不同步，屬正常現象）`;
+      $('fresh-idx').className = 'fr-badge fr-neutral';
+    } else {
+      $('fresh-idx').textContent = '尚無資料';
+      $('fresh-idx').className = 'fr-badge fr-warn';
+    }
 
     if(maxUsDate){
       $('fresh-us').textContent = `${maxUsDate}（美股上一交易日，跟台股有時區落差屬正常，不套用台股的核對邏輯）`;
@@ -2796,6 +2834,21 @@ async function initApp(){
     } else {
       $('fresh-us').textContent = '尚無資料';
       $('fresh-us').className = 'fr-badge fr-warn';
+    }
+
+    // 落後標的清單：只要有標的的資料日期比「多數標的日期(repTwDate)」還舊，就明確列出來，
+    // 不要只靠上面那顆燈號的顏色——燈號只看多數，少數幾檔落後不會讓燈號變紅/黃，
+    // 但持股決策需要知道「究竟是哪幾檔」落後，才能自己判斷要不要再等、或去查FinMind那邊
+    // 是不是還沒放出當天資料。
+    const laggards = repTwDate ? twResults.filter(t=>t.latestTradeDate && t.latestTradeDate < repTwDate) : [];
+    const lagBanner = $('fresh-lag-banner');
+    if(laggards.length>0){
+      const list = laggards.map(t=>`${t.cfg.symbol} ${t.cfg.name}(${t.latestTradeDate})`).join('、');
+      lagBanner.style.display = 'block';
+      lagBanner.innerHTML = `⚠️ 以下 ${laggards.length} 檔標的資料日期比多數標的(${repTwDate})落後，可能是FinMind資料源還沒更新到最新交易日(免費版常見現象，通常隔天會補上)：${list}`;
+    } else {
+      lagBanner.style.display = 'none';
+      lagBanner.innerHTML = '';
     }
 
     $('last-updated').textContent = now.toLocaleString('zh-TW');
