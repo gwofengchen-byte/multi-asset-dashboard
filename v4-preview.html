@@ -2410,14 +2410,19 @@ function buildCharts(t, tab){
   // 用一次canvas繪圖(moveTo/lineTo畫上下影線+fillRect畫實體)完成，不會有這類疊圖問題，
   // 十字線(開盤=收盤)也會自動畫成一條扁平線，不用像之前那樣手動加最小高度墊高。
   //
-  // 顏色語意提醒(重要，容易搞混)：這個外掛內部命名的"up"/"down"跟一般直覺是反過來的——
-  // 原始碼寫死「收盤<開盤 → 套用colors.up」「收盤>開盤 → 套用colors.down」(等於外掛把
-  // "up"當成"開高走低"的顏色代號，不是「股價上漲」的意思)。要畫成台股慣例(收盤>開盤=
-  // 上漲=紅色、收盤<開盤=下跌=綠色)，必須把colors.up設成綠色、colors.down設成紅色，
-  // 兩個名稱剛好要對調，這裡用UP_COLOR/DOWN_COLOR(代表真正的漲/跌顏色)明確標註，
-  // 避免以後改code時又被外掛的命名誤導。
+  // 顏色語意更正(2026-09)：先前這裡的註解誤判外掛"up"/"down"命名是反過來的，因此把
+  // colors.up/colors.down對調，結果造成上漲日畫成綠色、下跌日畫成紅色，跟台股慣例相反
+  // (使用者用手機看盤軟體比對9/9奇鋐3017開3285收3380這筆實際案例才發現)。
+  // 追查後發現：外掛原始碼draw()裡的"收盤<開盤 → colors.up"、"收盤>開盤 → colors.down"，
+  // 這裡的open/close在執行到draw()當下，已經不是原始股價數字，而是calculateElementProperties()
+  // 轉換過的「畫布像素座標」(canvas y軸越往上像素值越小，但股價越高應該畫在越上面，所以
+  // 股價越高、像素值越小——跟股價本身的大小關係是相反的)。所以「像素座標的close<open」
+  // 其實對應的是「真實股價close>open」(股價上漲)，外掛的"up"命名本來就是對的、跟一般
+  // 直覺一致，不需要對調colors.up/colors.down。已用實際render + hook ctx.fillRect驗證
+  // (上漲的資料點確實套用colors.up、下跌的資料點確實套用colors.down)，這裡直接照字面
+  // 設定：colors.up=紅(漲)、colors.down=綠(跌)，不要再對調，避免重新引入這個bug。
   const UP_COLOR = '#d9363e', DOWN_COLOR = '#1e9e5a';
-  const candleColors = {up: DOWN_COLOR, down: UP_COLOR, unchanged: '#8a8f98'};
+  const candleColors = {up: UP_COLOR, down: DOWN_COLOR, unchanged: '#8a8f98'};
   const fmt2 = (v)=> v==null ? '--' : Number(v).toFixed(2);
 
   // K棒圖表改用時間軸(time scale)，需要「真正的日期」而不是純顯示用的"M/D"字串，
