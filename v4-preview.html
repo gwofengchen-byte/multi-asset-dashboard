@@ -814,6 +814,20 @@ const TICKERS = [
    ['產業別','半導體-記憶體(DRAM/NOR Flash)，手動維護'],
    ['預估EPS來源','FactSet最新調查(11位分析師)，2026年EPS預估中位數21.27元，2026-08查證，來源：鉅亨網(news.cnyes.com)。下方PE模型預設值即採用此數字，你可自行覆蓋'],
  ],
+ // 2026-09新增：華邦電專屬監控面板用的手動備註欄位(DRAM ASP無自動資料源、ETF持股/EPS共識/風險重點
+ // 為聚合彙整非即時API)。這些是你在2026-09-17提供的筆記彙整，之後想更新就直接改這幾個欄位即可，
+ // 不需要動任何計算邏輯。
+ manualNotes2344:{
+   dramAspNote:'尚無自動化QoQ%資料源，先用文字紀錄：法說會(2026-08)提到DDR4現貨價創2016年以來新高，CMS客製化記憶體供需缺口估延伸至2028年，2026-2027產能已全數售出(來源：2344_華邦電筆記，2026-09-17整理，非官方公告原文，需你自行核對細節數字)。',
+   etfHoldingsNote:'00913兆豐特選台灣晶圓製造ETF 14.61%、00947台新臺灣IC設計動能ETF 10.15%、安聯台灣智慧基金6.99%、0056元大高股息4.04%(聚合網站快照，非官方即時申報；尚未進入0050/006208等市值型大盤ETF成分股)',
+   epsConsensusNote:'FactSet共識(10位分析師,2026-09-08)：2026E中位數25.37元/2027E 50.05元/2028E 48.73元，目標價中位數233元；法人目標價半年內大摩140→222元、摩根大通255元(2026-06-16)，波動劇烈反映對記憶體循環持續時間看法分歧',
+   riskNotes:[
+     '獲利高度依賴DDR4/NOR Flash現貨與合約價持續上漲，非終端需求(PC/手機仍衰退逾10%)回溫',
+     '中國長鑫(CXMT)擴產為中長期潛在威脅，法人看法分歧(2026-03-21曾因此下修目標價)',
+     '多檔可轉債(國內第四/五次+海外第四次)陸續發行到期，稀釋與贖回壓力需追蹤',
+     '股價已大漲，法人預估區間半年內劇烈波動，追高風險需留意；與長線存股屬性不完全契合，建議衛星部位處理',
+   ],
+ },
  peModel:{defaultEps:21.27},
  rule:'跌破EMA60且KD死亡交叉→減碼一半；跌破20日低→出清；PE百分位>90%→停止加碼（記憶體屬景氣循環股，股價/獲利波動大，門檻示意，需你自行確認）。',
  entryRule:'PE歷史百分位<50%，或拉回測試EMA60不破，可分批布局（記憶體循環股，留意產業景氣位階）',
@@ -1024,6 +1038,11 @@ const TICKERS = [
  ]},
 ];
 const TICKER_MAP = {}; // symbol -> 計算後的 t 物件，calcPE() 要用來拿 peBands
+// 2026-09新增：DRAM現貨價格(手動回報，見update_dram_price.py/check_dram_price_reminder.py檔頭
+// 說明)。這張表不是per-stock資料(沒有stock_id欄位)，只跟商品品項有關，所以刻意不放進
+// fetchTickerRaw()的per-ticker查詢裡(不然20幾檔標的每個都查一次同一張小表，浪費請求)，
+// 改成initApp()裡只查一次存到這個全域變數，2344的監控卡片直接讀這裡。
+let DRAM_PRICE_ROWS = [];
 
 /* ---------- Supabase 連線與設定 ---------- */
 const $ = (id) => document.getElementById(id);
@@ -1044,22 +1063,31 @@ function priceFmtV(t,v,d){ const prefix = t.cfg.currency==='USD' ? '$' : ''; ret
 
 /* ---------- 抓單一標的的所有真實資料 ---------- */
 async function fetchTickerRaw(symbol){
-  const [priceRes, valRes, chipRes, etfRes, divRes, obRes, finRes, cfRes, estRes, instRes] = await Promise.all([
+  const [priceRes, valRes, chipRes, etfRes, divRes, obRes, finRes, cfRes, estRes, instRes, revRes] = await Promise.all([
     // rsi14/kd_k/kd_d/macd_*這幾欄是main.py那邊Python算好存的(server端版本)，只用來給
     // 「資料一致性驗算」拿去跟前端這裡自己重算的版本比對，圖表本身還是用前端重算的
     // emaSeries/rsiSeries/kdSeries/macdSeries(維持原本架構不變，只是多抓這幾欄來對照)。
-    supabaseClient.from('daily_price').select('trade_date,open,high,low,close,rsi14,kd_k,kd_d,macd_dif,macd_signal,macd_hist').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(300),
+    // 2026-09新增volume欄位：原本完全沒抓過成交量，這裡補上是給2344籌碼雷達的「成交量放大」訊號用，
+    // 對其他標的沒有副作用(只是多一個沒人用到的欄位，不影響既有技術指標計算)。
+    supabaseClient.from('daily_price').select('trade_date,open,high,low,close,volume,rsi14,kd_k,kd_d,macd_dif,macd_signal,macd_hist').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(300),
     supabaseClient.from('valuation').select('pe_ratio,pb_ratio,dividend_yield_pct,trade_date').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1500),
-    supabaseClient.from('chip_flow').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(5),
+    // 2026-09擴大成7筆(原本5筆)，給籌碼雷達算「近3日/近5日翻正」用，5日窗格需要至少5筆。
+    supabaseClient.from('chip_flow').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(7),
     supabaseClient.from('etf_valuation').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1),
     supabaseClient.from('dividend_fill').select('*').eq('stock_id',symbol).order('ex_date',{ascending:false}).limit(6),
     supabaseClient.from('overseas_benchmark').select('*').eq('stock_id',symbol).order('trade_date',{ascending:false}).limit(1),
-    supabaseClient.from('quarterly_financials').select('*').eq('stock_id',symbol).order('fiscal_quarter',{ascending:false}).limit(8),
+    // 2026-09把limit從8季拉長到20季(5年)：原本4季的財報卡片用途不變(只取前4筆)，
+    // 拉長純粹是為了2344本益比河流圖需要更長的「移動4季EPS總和」歷史才畫得出移動的參考帶，
+    // 對其他標的沒有副作用(其他計算都還是只取sorted.slice(0,4))。
+    supabaseClient.from('quarterly_financials').select('*').eq('stock_id',symbol).order('fiscal_quarter',{ascending:false}).limit(20),
     supabaseClient.from('cash_flow_statement').select('*').eq('stock_id',symbol).order('fiscal_quarter',{ascending:false}).limit(4),
     supabaseClient.from('analyst_estimates').select('*').eq('stock_id',symbol).order('report_date',{ascending:false}),
     supabaseClient.from('institutional_holdings').select('*').eq('stock_id',symbol).order('report_date',{ascending:false}).limit(40),
+    // 2026-09新增：月營收(MOPS來源，全自動)，先前完全沒有標的用到這張表，
+    // 這裡補上給「華邦電四大監控指標」的營收年增/月增那一項用，limit(6)=半年份足夠看趨勢。
+    supabaseClient.from('monthly_revenue').select('*').eq('stock_id',symbol).order('revenue_month',{ascending:false}).limit(6),
   ]);
-  for(const r of [priceRes,valRes,chipRes,etfRes,divRes,obRes,finRes,cfRes,estRes,instRes]){
+  for(const r of [priceRes,valRes,chipRes,etfRes,divRes,obRes,finRes,cfRes,estRes,instRes,revRes]){
     if(r.error) throw new Error(`[${symbol}] ${r.error.message}`);
   }
   return {
@@ -1073,6 +1101,7 @@ async function fetchTickerRaw(symbol){
     cfRows:cfRes.data||[],
     estRows:estRes.data||[],
     instRows:instRes.data||[],
+    monthlyRevRows:revRes.data||[],
   };
 }
 
@@ -1119,6 +1148,8 @@ function computeTicker(cfg, raw){
   // K棒(蠟燭圖)需要開盤價畫出「實體」區間；少數舊資料/來源沒有open欄位時退回收盤價，
   // 這種情況下該天的K棒實體會塌成一條線，不會報錯，只是那天看起來像十字線。
   const opens = rows.map(r=>r.open!=null?Number(r.open):Number(r.close));
+  // 2026-09新增：成交量序列，只給2344籌碼雷達的「成交量放大」訊號用，其餘計算不使用這個欄位。
+  const volumes = rows.map(r=>r.volume!=null?Number(r.volume):null);
   const dates = rows.map(r=>{const d=new Date(r.trade_date+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate();});
   // K棒圖表要用真正的日期(給time scale用)，跟上面純顯示用的"M/D"字串分開存，
   // 兩邊筆數/順序完全對齊(都是同一個rows陣列map出來的)。
@@ -1133,13 +1164,26 @@ function computeTicker(cfg, raw){
   const last=closes.length-1;
 
   const t = {
-    cfg, closes,highs,lows,opens,dates,tradeDates,ema20,ema60,rsiArr,macd,kd,h20,l20,bbw,
+    cfg, closes,highs,lows,opens,volumes,dates,tradeDates,ema20,ema60,rsiArr,macd,kd,h20,l20,bbw,
     price:closes[last], pct: last>0 ? (closes[last]-closes[last-1])/closes[last-1]*100 : null,
     ema20v:ema20[last], ema60v:ema60[last], rsi:rsiArr[last],
     dif:macd.dif[last], dea:macd.dea[last], osc:macd.osc[last],
     kdk:kd.k[last], kdd:kd.d[last], h20v:h20[last], l20v:l20[last], bbwv:bbw[last],
     latestTradeDate: rows[rows.length-1].trade_date, // 這檔標的目前資料庫裡最新的一筆交易日，給頂部「資料日期」核對機制用
   };
+
+  // 2026-09新增：今日成交量 vs 前20日均量比值，給2344籌碼雷達「成交量放大」訊號用。
+  // 用last-1到last-20(不含當日)當基準均量，避免當日量自己灌自己。
+  if(volumes[last]!=null){
+    const winStart = Math.max(0, last-20);
+    const priorVols = volumes.slice(winStart, last).filter(v=>v!=null);
+    if(priorVols.length>=5){
+      const avgVol20 = priorVols.reduce((s,v)=>s+v,0)/priorVols.length;
+      t.volToday = volumes[last];
+      t.avgVol20 = avgVol20;
+      t.volRatio = avgVol20>0 ? volumes[last]/avgVol20 : null;
+    }
+  }
 
   // 乖離率(%)：價格/均線相對位置，追價風險判斷用。EMA20_vs_EMA60_%>0代表多頭排列，
   // 數字越大排列越開；Price_vs_EMA20_%太高代表短線已經漲多、追高風險上升。
@@ -1271,6 +1315,26 @@ function computeTicker(cfg, raw){
   }
   if(raw.cfRows) t.cashflow = raw.cfRows;
   if(raw.estRows) t.analysts = raw.estRows;
+
+  // 2026-09新增：月營收(給營收年增/月增卡片用，目前只有2344會顯示，但所有標的都算好備用)
+  if(raw.monthlyRevRows && raw.monthlyRevRows.length>0){
+    t.monthlyRevenue = raw.monthlyRevRows.slice().sort((a,b)=>a.revenue_month<b.revenue_month?1:-1); // desc，最新在前
+  }
+
+  // 2026-09新增：移動4季EPS總和(TTM EPS)序列，由舊到新排序，給本益比河流圖用。
+  // 用quarterly_financials現在拉長到20季的歷史，每一季往前抓自己+前3季的eps加總，
+  // 不足4季的最舊幾筆(資料頭尾)會因為抓不到前3季而跳過，不會硬湊出錯誤的TTM值。
+  if(raw.finRows && raw.finRows.length>=4){
+    const ascAll = raw.finRows.slice().sort((a,b)=>a.fiscal_quarter>b.fiscal_quarter?1:-1); // asc
+    const ttmSeries = [];
+    for(let i=3;i<ascAll.length;i++){
+      const window = ascAll.slice(i-3,i+1);
+      if(window.some(r=>r.eps==null)) continue; // 任一季EPS缺值就跳過該點，不用0假裝
+      const ttmEps = window.reduce((s,r)=>s+Number(r.eps),0);
+      ttmSeries.push({q:ascAll[i].fiscal_quarter, ttmEps});
+    }
+    if(ttmSeries.length>0) t.ttmEpsSeries = ttmSeries;
+  }
 
   return t;
 }
@@ -1946,6 +2010,300 @@ function computeMarketRegime(t){
   }
   return {regime, trendState, momentumState};
 }
+// ============ 2344華邦電專屬：四大監控指標 ============
+// 2026-09新增，只給symbol==='2344'使用(在renderStockSection裡gate)，對其他標的無副作用。
+// 2026-09新增：DRAM現貨價格(手動回報)查詢+QoQ%燈號計算，規則要跟update_dram_price.py的
+// qoq_light()保持一致(🟢≥+10% / 🟡0~+10%之間 / 🔴<0%)，兩邊分開維護、修改時記得同步改。
+async function fetchDramPriceRows(){
+  try{
+    const res = await supabaseClient.from('dram_spot_price_manual').select('record_date,item,avg_price,note').order('record_date',{ascending:false}).limit(60);
+    if(res.error){ console.warn('dram_spot_price_manual查詢失敗，DRAM ASP燈號將顯示為資料不足：', res.error); return []; }
+    return res.data||[];
+  }catch(e){
+    console.warn('dram_spot_price_manual查詢發生例外，DRAM ASP燈號將顯示為資料不足：', e);
+    return [];
+  }
+}
+function computeDramAspSignal(item){
+  const rows = (DRAM_PRICE_ROWS||[]).filter(r=>r.item===item).slice().sort((a,b)=>a.record_date<b.record_date?1:-1); // desc
+  if(rows.length===0) return null;
+  const latest = rows[0];
+  if(rows.length<2){
+    return {light:'⚪', lightLabel:'僅1筆回報記錄，尚無法算QoQ%', latest:Number(latest.avg_price), latestDate:latest.record_date, pct:null};
+  }
+  // 找離「91天前(概略當一季)」最接近的一筆舊資料來算QoQ%，跟update_dram_price.py同一套邏輯
+  const curTime = new Date(latest.record_date+'T00:00:00').getTime();
+  const targetTime = curTime - 91*86400000;
+  let closest = rows[1], bestDiff = Math.abs(new Date(rows[1].record_date+'T00:00:00').getTime()-targetTime);
+  for(const r of rows.slice(1)){
+    const diff = Math.abs(new Date(r.record_date+'T00:00:00').getTime()-targetTime);
+    if(diff<bestDiff){ bestDiff=diff; closest=r; }
+  }
+  const oldPrice = Number(closest.avg_price);
+  const pct = oldPrice ? (Number(latest.avg_price)-oldPrice)/oldPrice*100 : null;
+  let light='⚪', lightLabel='資料不足';
+  if(pct!=null){
+    if(pct>=10){ light='🟢'; lightLabel='QoQ≥+10%'; }
+    else if(pct>=0){ light='🟡'; lightLabel='QoQ介於0~+10%之間'; }
+    else { light='🔴'; lightLabel='QoQ&lt;0%，現貨價下滑'; }
+  }
+  return {light, lightLabel, latest:Number(latest.avg_price), latestDate:latest.record_date, pct, oldPrice, oldDate:closest.record_date};
+}
+
+function computeEpsRevisionSignal(estRows, period, institution){
+  // institution預設鎖定'Yahoo財經共識'：這是唯一有「同一期間隨時間多次快照」的資料來源(你提供的
+  // Q3/Q4/全年上修歷程都是這個來源)，其他機構(FactSet/大摩/摩根大通...)在同一eps_period通常只有
+  // 1筆最新報告，混在一起比較「最新兩筆」會變成拿不同機構的方法論互相比，不是同一機構的真實修正
+  // 歷程(這裡曾經因為FactSet剛好跟Yahoo同一天都有2026FY快照，被誤判成下修，已用假資料測試抓出來
+  // 並修正——所以務必鎖定單一機構，不要跨機構比較)。
+  institution = institution || 'Yahoo財經共識';
+  if(!estRows || estRows.length===0) return null;
+  const rows = estRows.filter(r=>{
+    const p = r.eps_period || (r.eps_estimate_year ? `${r.eps_estimate_year}FY` : null);
+    return p===period && r.eps_estimate!=null && r.institution===institution;
+  });
+  if(rows.length===0) return null;
+  const sorted = rows.slice().sort((a,b)=>(a.report_date||'')<(b.report_date||'')?-1:1); // asc by report_date
+  const latest = sorted[sorted.length-1];
+  const prev = sorted.length>=2 ? sorted[sorted.length-2] : null;
+  let light='⚪', lightLabel='資料不足(僅1筆快照，無法判斷趨勢)';
+  if(prev){
+    if(latest.eps_estimate > prev.eps_estimate){ light='🟢'; lightLabel='上修'; }
+    else if(latest.eps_estimate < prev.eps_estimate){ light='🔴'; lightLabel='下修'; }
+    else { light='🟡'; lightLabel='持平'; }
+  }
+  return {
+    period, light, lightLabel,
+    latest: latest.eps_estimate, latestDate: latest.report_date,
+    prev: prev ? prev.eps_estimate : null,
+    history: sorted.map(r=>({v:r.eps_estimate, d:r.report_date})),
+  };
+}
+
+function computeGrossMarginTrend2344(financials){
+  // financials是t.financials，desc排序(index0=最新一季)
+  if(!financials || financials.length<3) return {warn:false, text:'毛利率歷史資料不足(需至少3季才能判斷連續2季下降)'};
+  const [q0,q1,q2] = financials;
+  if(q0.gross==null || q1.gross==null || q2.gross==null) return {warn:false, text:'毛利率資料不足'};
+  const warn = q0.gross < q1.gross && q1.gross < q2.gross;
+  return {
+    warn,
+    text:`${q2.q} ${q2.gross.toFixed(1)}% → ${q1.q} ${q1.gross.toFixed(1)}% → ${q0.q} ${q0.gross.toFixed(1)}%${warn?'（已連續2季下降，達警戒規則）':'（尚未觸發「連續2季下降」警戒規則）'}`
+  };
+}
+
+function computeRevenueLine2344(monthlyRevenue){
+  // monthlyRevenue是t.monthlyRevenue，desc排序(index0=最新月份)
+  // 注意：revenue_ntd單位沿用FinMind TaiwanStockMonthRevenue原始欄位「revenue」，這裡假設為
+  // 元(NTD)所以除以1e8換算成「億元」；如果你比對公司新聞稿數字覺得差100倍，代表FinMind那組
+  // 資料實際上是「仟元」單位，屆時要回頭修fetch_revenue_financials.py存入時的單位換算，而不是
+  // 改這裡的顯示邏輯。
+  if(!monthlyRevenue || monthlyRevenue.length===0) return null;
+  const m0 = monthlyRevenue[0];
+  const monthLabel = (m0.revenue_month||'').slice(0,7);
+  const fmtPctSigned=(v)=>v==null?'--':`${v>=0?'+':''}${Number(v).toFixed(2)}%`;
+  return {
+    monthLabel,
+    revenueYi: m0.revenue_ntd!=null ? (m0.revenue_ntd/1e8) : null,
+    yoyText: fmtPctSigned(m0.yoy_pct),
+    momText: fmtPctSigned(m0.mom_pct),
+    cumYoyText: fmtPctSigned(m0.cumulative_yoy_pct),
+  };
+}
+
+function renderMonitorCard2344(t){
+  const epsQ3 = computeEpsRevisionSignal(t.analysts, '2026Q3');
+  const epsQ4 = computeEpsRevisionSignal(t.analysts, '2026Q4');
+  const epsFY = computeEpsRevisionSignal(t.analysts, '2026FY');
+  const gm = computeGrossMarginTrend2344(t.financials);
+  const rev = computeRevenueLine2344(t.monthlyRevenue);
+  const dramNote = (t.cfg.manualNotes2344 && t.cfg.manualNotes2344.dramAspNote) || '';
+  const dramSig = computeDramAspSignal('DDR4 8Gb (1Gx8) 3200');
+
+  const epsBlock = (label, sig) => {
+    if(!sig) return `<div class="tech-cell"><div class="lbl">${label}</div><div class="val">--</div><div class="note">尚無analyst_estimates資料</div></div>`;
+    return `<div class="tech-cell"><div class="lbl">${label} EPS共識</div><div class="val">${sig.light} ${sig.latest.toFixed(2)}元</div><div class="note">${sig.lightLabel}${sig.prev!=null?`（前次${sig.prev.toFixed(2)}元）`:''}，最新快照${sig.latestDate||'--'}</div></div>`;
+  };
+
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">📊 華邦電四大監控指標（手動+自動混合，僅供參考）</div>
+    <div class="tech-grid" style="margin-bottom:8px;">
+      ${epsBlock('Q3', epsQ3)}
+      ${epsBlock('Q4', epsQ4)}
+      ${epsBlock('全年', epsFY)}
+    </div>
+    <div class="score-note" style="margin-left:0;">① EPS Revision：🟢上修／🟡持平／🔴下修／⚪僅1筆快照無法判斷。判斷方式＝比較analyst_estimates裡同一eps_period最新兩筆report_date快照的eps_estimate。</div>
+
+    <div class="tech-grid" style="margin:10px 0 8px;">
+      <div class="tech-cell" style="grid-column:span 3;">
+        <div class="lbl">② DRAM ASP QoQ（DDR4 8Gb (1Gx8) 3200，現貨均價，來源TrendForce手動回報）</div>
+        <div class="val">${dramSig ? `${dramSig.light} ${dramSig.pct!=null?`${dramSig.pct>=0?'+':''}${dramSig.pct.toFixed(2)}%`:'--'}` : '⚪ 尚無回報記錄'}</div>
+        <div class="note">${dramSig
+          ? `${dramSig.lightLabel}。最新回報 ${dramSig.latestDate}：${dramSig.latest} USD${dramSig.oldDate?`，對照 ${dramSig.oldDate}：${dramSig.oldPrice} USD`:''}`
+          : `2026-09查證：TrendForce使用條款禁止爬蟲，改為手動回報，check_dram_price_reminder.py會每2週提醒你去看一次並執行update_dram_price.py回報`}</div>
+      </div>
+    </div>
+    <div class="score-note" style="margin-left:0;">🟢≥+10% ／ 🟡介於0~+10%之間 ／ 🔴&lt;0%(現貨價下滑) ／ ⚪資料不足(不足2筆回報無法算QoQ%)。${dramNote?`補充備註：${dramNote}`:''}</div>
+
+    <div class="tech-grid" style="margin:10px 0 8px;">
+      <div class="tech-cell" style="grid-column:span 3;"><div class="lbl">③ 毛利率趨勢${gm.warn?'　🔴 警戒':''}</div><div class="val" style="font-size:13px;">${gm.text}</div></div>
+    </div>
+    <div class="score-note" style="margin-left:0;">規則：連續2季毛利率下降視為警戒（記憶體循環股常在報價反轉前先出現毛利率轉折，跟股價比可能更早反應）。</div>
+
+    <div class="tech-grid" style="margin:10px 0 8px;">
+      <div class="tech-cell" style="grid-column:span 3;"><div class="lbl">④ 月營收年增/月增</div><div class="val" style="font-size:13px;">${rev ? `${rev.monthLabel} 營收${rev.revenueYi!=null?rev.revenueYi.toFixed(2)+'億元':'--'}，YoY${rev.yoyText}，MoM${rev.momText}${rev.cumYoyText!=='--'?`，累計YoY${rev.cumYoyText}`:''}` : '尚無monthly_revenue資料，main.py要先成功跑過「月營收/季度財報」步驟'}</div></div>
+    </div>
+    <div class="score-note" style="margin-left:0;">來源：MOPS月營收公告，由main.py自動更新；若跟公司新聞稿數字對不上，優先以公司官方公告為準，這裡的YoY/MoM是直接沿用FinMind算好的欄位。</div>
+  </div>`;
+}
+
+// ============ 2344華邦電專屬：籌碼雷達 ============
+// 2026-09新增。「翻正」定義：近3日合計淨買超>0且近5日合計淨買超>0(用合計金額判斷方向，
+// 不是要求每天都買超)；「連續5日賣超」則反過來要求近5日每一天都是賣超(較嚴格的紅燈條件，
+// 對應使用者原始設計的🔴情境)。成交量放大門檻(≥20日均量1.2倍)、跌破近20日低點的判斷方式
+// 都是工程上合理的具體化，非官方定義，可視情況調整門檻。
+function computeChipRadar2344(t){
+  const chip = t.chipRecent; // desc排序：index0=最新一天
+  if(!chip || chip.length<5){
+    return {level:'insufficient', text:`chip_flow資料只有${chip?chip.length:0}天，籌碼雷達至少需要5個交易日才能計算，資料仍在累積中`};
+  }
+  const last3 = chip.slice(0,3), last5 = chip.slice(0,5);
+  const sum=(arr,key)=>arr.reduce((s,r)=>s+(Number(r[key])||0),0);
+  const foreign3=sum(last3,'foreign_net_buy'), foreign5=sum(last5,'foreign_net_buy');
+  const trust3=sum(last3,'trust_net_buy'), trust5=sum(last5,'trust_net_buy');
+  const foreignTurnedPositive = foreign3>0 && foreign5>0;
+  const trustTurnedPositive = trust3>0 && trust5>0;
+  const foreignSellStreak5 = last5.every(r=>(Number(r.foreign_net_buy)||0)<0);
+  const trustSellStreak5 = last5.every(r=>(Number(r.trust_net_buy)||0)<0);
+  const priceAboveEma20 = (t.price!=null && t.ema20v!=null) ? t.price>=t.ema20v : null;
+  const volExpansion = t.volRatio!=null ? t.volRatio>=1.2 : null;
+  const brokeRecentLow = (t.price!=null && t.l20v!=null) ? t.price<=t.l20v : null;
+
+  let level;
+  if(foreignSellStreak5 && trustSellStreak5 && brokeRecentLow && volExpansion){ level='red'; }
+  else if(foreignTurnedPositive && trustTurnedPositive && priceAboveEma20 && volExpansion){ level='green'; }
+  else { level='yellow'; }
+
+  return {level, foreign3,foreign5,trust3,trust5, foreignTurnedPositive,trustTurnedPositive,
+          foreignSellStreak5,trustSellStreak5, priceAboveEma20, volExpansion, brokeRecentLow};
+}
+
+function renderChipRadarCard2344(t){
+  const r = computeChipRadar2344(t);
+  const fmtLot=(v)=>v==null?'--':`${v>=0?'+':''}${Math.round(v/1000).toLocaleString()}張`;
+  if(r.level==='insufficient'){
+    return `<div class="ai-score-card"><div class="ai-verdict-title">🎯 華邦電籌碼雷達</div><div class="score-empty">${r.text}</div></div>`;
+  }
+  const badgeCls = r.level==='green' ? 'entry' : (r.level==='red' ? 'exit' : 'watch');
+  const badgeLabel = r.level==='green' ? '🟢 籌碼轉強' : (r.level==='red' ? '🔴 籌碼轉弱' : '🟡 中性');
+  const etfNote = (t.cfg.manualNotes2344 && t.cfg.manualNotes2344.etfHoldingsNote) || '尚未填寫manualNotes2344.etfHoldingsNote';
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">🎯 華邦電籌碼雷達</div>
+    <div class="ai-verdict-badge ${badgeCls}">${badgeLabel}</div>
+    <table class="sig-matrix" style="margin-bottom:6px;">
+      <thead><tr><th>條件</th><th>近3日合計</th><th>近5日合計</th><th>是否成立</th></tr></thead>
+      <tbody>
+        <tr class="${r.foreignTurnedPositive?'on':''}"><td>外資翻正</td><td>${fmtLot(r.foreign3)}</td><td>${fmtLot(r.foreign5)}</td><td>${r.foreignTurnedPositive?'✅':'--'}</td></tr>
+        <tr class="${r.trustTurnedPositive?'on':''}"><td>投信翻正</td><td>${fmtLot(r.trust3)}</td><td>${fmtLot(r.trust5)}</td><td>${r.trustTurnedPositive?'✅':'--'}</td></tr>
+        <tr class="${r.priceAboveEma20?'on':''}"><td>股價站回短期均線(EMA20)</td><td colspan="2">${t.price!=null&&t.ema20v!=null?`${t.price.toFixed(1)} vs ${t.ema20v.toFixed(1)}`:'--'}</td><td>${r.priceAboveEma20==null?'--':(r.priceAboveEma20?'✅':'❌')}</td></tr>
+        <tr class="${r.volExpansion?'on':''}"><td>成交量放大(≥20日均量1.2倍)</td><td colspan="2">${t.volRatio!=null?`${t.volRatio.toFixed(2)}倍`:'資料不足'}</td><td>${r.volExpansion==null?'--':(r.volExpansion?'✅':'❌')}</td></tr>
+      </tbody>
+    </table>
+    <div class="score-note" style="margin-left:0;">🟢＝外資與投信「近3日+近5日合計」皆翻正、股價站回EMA20、且量放大同時成立；🔴＝外資與投信「連續5日每日皆賣超」且股價跌破近20日低點、同時量放大；其餘情況顯示🟡中性。「主動式ETF重新加碼」目前沒有自動化資料源，不計入燈號計算，僅供參考：${etfNote}</div>
+  </div>`;
+}
+
+// ============ 2344華邦電專屬：進場分層卡片 ============
+// 2026-09新增。第一層/第二層/第三層是你自己設計的價格分層，這裡原樣呈現+標示目前價格落在哪一層，
+// 下面「優化建議」是我依你既有邏輯提出的調整方向，僅供參考、不是投資建議，你可以自行決定要不要採用。
+function renderEntryZoneCard2344(t){
+  const zones = [
+    {label:'第一層：150～160', range:[150,160], rationale:'回檔觀察區。如果基本面沒有惡化，這個區域的風險報酬會比170～180漂亮。'},
+    {label:'第二層：135～150', range:[135,150], rationale:'如果大盤修正、記憶體族群修正、華邦電拉回，但EPS預估仍持續上修，反而可能是比較值得注意的區域。'},
+    {label:'第三層：170～180', range:[170,180], rationale:'目前這附近比較謹慎，不是基本面不好，而是市場已知道2026 EPS可能25元以上，追價需要新催化劑(例如Q3 EPS>8元、Q4預估繼續上修、DRAM/NOR報價繼續上漲、2027 EPS繼續上修)。'},
+  ];
+  const price = t.price;
+  const zoneRows = zones.map(z=>{
+    const inZone = price!=null && price>=z.range[0] && price<=z.range[1];
+    return `<tr class="${inZone?'on':''}"><td>${z.label}${inZone?'　👉目前價格在此區間':''}</td><td>${z.rationale}</td></tr>`;
+  }).join('');
+
+  // 交叉參考：目前EPS上修狀態＋籌碼雷達燈號，給分層規則加一層「基本面/籌碼是否配合」的提示，
+  // 不改變你原本的價格分層邏輯，只是提醒是否有背離。
+  const epsFY = computeEpsRevisionSignal(t.analysts, '2026FY');
+  const chip = computeChipRadar2344(t);
+  const epsNote = epsFY ? `目前全年EPS共識${epsFY.light}${epsFY.lightLabel}(最新${epsFY.latest.toFixed(2)}元)` : '目前無全年EPS共識資料';
+  const chipNote = chip.level==='insufficient' ? '籌碼雷達資料仍在累積中' : `目前籌碼雷達為${chip.level==='green'?'🟢籌碼轉強':(chip.level==='red'?'🔴籌碼轉弱':'🟡中性')}`;
+
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">🧭 華邦電進場分層（你的原始設計，僅供參考）</div>
+    <table class="sig-matrix" style="margin-bottom:8px;">
+      <thead><tr><th>價格區間</th><th>邏輯</th></tr></thead>
+      <tbody>${zoneRows}</tbody>
+    </table>
+    <div class="score-note" style="margin-left:0;">目前收盤${price!=null?price.toFixed(1):'--'}元；${epsNote}；${chipNote}（基本面/籌碼跟價格分層是否同向，你可以自己判斷要不要調整分批節奏）。</div>
+
+    <div class="ai-verdict-title" style="margin-top:14px;font-size:13px;">💡 可考慮的優化方向（我的建議，非投資建議，你的原始邏輯已經相當完整）</div>
+    <ul class="score-note" style="margin:4px 0 0 16px;">
+      <li>你的三層目前是「價格區間」單一維度，可以考慮疊加一個「基本面/籌碼否決條件」：不論價格落在哪一層，只要①EPS共識轉為🔴下修，或②毛利率觸發連續2季下降警戒，或③籌碼雷達轉🔴，就先暫停該層加碼、重新檢視，而不是機械式看到價格就買。</li>
+      <li>第一層(150-160)跟第二層(135-150)在150附近有重疊，可以考慮改成「單一回檔布局區(<160)，依拉回深度分批：150-160布局1/3、140-150布局1/3、135-140布局1/3」，取代目前兩層各自獨立的設計，邏輯更連貫也更容易執行。</li>
+      <li>第三層(170-180)的「新催化劑」條件目前是質化描述，可以考慮量化：例如「Q3單季EPS實際值>8元」可以直接對照本卡片上方②DRAM/①EPS監控指標的即時資料自動判斷是否成立，不用等法說會後才手動確認。</li>
+      <li>記憶體循環股的高波動特性，建議搭配本益比河流圖(下方)一起看：同樣170-180的股價，如果是建立在EPS持續上修的基礎上，PE倍數不一定比150-160時貴，單看價格區間可能低估了獲利成長對估值的稀釋效果。</li>
+      <li>可以考慮加一條「時間止損」：如果進場後2-3個季度EPS上修動能明顯停滯(連續兩次法人快照未上修)，即使價格沒跌破分層，也重新檢視持股邏輯是否還成立(記憶體循環的產業週期性風險)。</li>
+    </ul>
+  </div>`;
+}
+
+// ============ 2344華邦電專屬：本益比河流圖(自製版) ============
+// 2026-09新增，依使用者2026-09-17決定：自己用資料庫既有的價格+quarterly_financials
+// EPS歷史算，不爬goodinfo.tw。canvas本身在buildCharts()裡用Chart.js畫，這裡只負責
+// HTML外框跟「資料不足」的空狀態訊息。
+function renderPeRiverChartBlock(t, tab){
+  const id = `${t.cfg.symbol}_${tab}`;
+  if(!t.ttmEpsSeries || t.ttmEpsSeries.length===0){
+    return `<div class="chart-block"><div class="chart-title">本益比河流圖（自製版，10/14/18/22/26/30倍）</div><div class="chart-empty">季度EPS歷史資料不足(quarterly_financials需要至少4季才能算出第一組移動4季EPS總和)，等main.py多跑幾次累積資料後會自動出現。</div></div>`;
+  }
+  return `<div class="chart-block">
+    <div class="chart-title">本益比河流圖（自製版，依移動4季EPS總和(TTM)×10/14/18/22/26/30倍畫出參考帶，非goodinfo爬蟲版本）</div>
+    <canvas id="perr_${id}" height="140"></canvas>
+    <div class="score-note" style="margin-left:0;">說明：用資料庫quarterly_financials的歷史EPS，逐季計算「移動4季EPS總和(TTM)」後乘上倍數畫出參考帶；用「季度結束日+45天」概略當作「市場開始反映該季EPS」的生效日期(近似值，不是精確的財報法定申報截止日，Q2/Q4實際公告時間通常比這個假設更晚，愈接近最新一季的帶狀區間愈可能提前反映還沒公告的EPS，僅供參考)。</div>
+  </div>`;
+}
+
+function fiscalQuarterEndDate(q){
+  const m = /^(\d{4})(Q[1-4])$/.exec(q||'');
+  if(!m) return null;
+  const monthDay = {Q1:'03-31',Q2:'06-30',Q3:'09-30',Q4:'12-31'}[m[2]];
+  return new Date(`${m[1]}-${monthDay}T00:00:00`);
+}
+function fiscalQuarterEffectiveDate(q){
+  const end = fiscalQuarterEndDate(q);
+  if(!end) return null;
+  const d = new Date(end.getTime());
+  d.setDate(d.getDate()+45); // 概略假設，見renderPeRiverChartBlock的說明文字
+  return d;
+}
+function buildPeRiverSeries(t){
+  if(!t.ttmEpsSeries || t.ttmEpsSeries.length===0) return null;
+  const points = t.ttmEpsSeries
+    .map(p=>({effDate: fiscalQuarterEffectiveDate(p.q), ttmEps:p.ttmEps, q:p.q}))
+    .filter(p=>p.effDate)
+    .sort((a,b)=>a.effDate-b.effDate);
+  if(points.length===0) return null;
+  const multiples = [10,14,18,22,26,30];
+  const bands = {}; multiples.forEach(m=>bands[m]=[]);
+  t.tradeDates.forEach(d=>{
+    const x = new Date(d+'T00:00:00').getTime();
+    let cur=null;
+    for(const p of points){ if(p.effDate.getTime()<=x) cur=p; else break; }
+    multiples.forEach(m=>bands[m].push(cur ? cur.ttmEps*m : null));
+  });
+  return {bands, multiples};
+}
+
 function renderMarketRegimeCard(t){
   const r = computeMarketRegime(t);
   if(!r) return '';
@@ -2310,7 +2668,11 @@ function renderStockSection(t, tab){
     <div class="chart-block"><div class="chart-title">MACD(12,26,9)</div><canvas id="macd_${cfg.symbol}_${tab}" height="80"></canvas></div>
     <div class="chart-block"><div class="chart-title">KD(9,3,3) 日（虛線為 80/20）</div><canvas id="kd_${cfg.symbol}_${tab}" height="80"></canvas></div>
     <div class="chart-block"><div class="chart-title">布林通道寬度 Bollinger Bandwidth(20,2)：數值越小＝盤整壓縮／打底，數值放大＝突破爆發</div><canvas id="bbw_${cfg.symbol}_${tab}" height="70"></canvas></div>
+    ${cfg.symbol==='2344' ? renderPeRiverChartBlock(t, tab) : ''}
 
+    ${cfg.symbol==='2344' ? renderMonitorCard2344(t) : ''}
+    ${cfg.symbol==='2344' ? renderChipRadarCard2344(t) : ''}
+    ${cfg.symbol==='2344' ? renderEntryZoneCard2344(t) : ''}
     ${deepHtml}
     ${chipHtml}
     ${instHtml}
@@ -2509,7 +2871,30 @@ function buildCharts(t, tab){
     options:{...common, scales:{...common.scales, y:{ticks:{font:{size:9}}}}}
   });
 
-  syncChartsCrosshair([priceChart, rsiChart, macdChart, kdChart, bbwChart]);
+  const chartsToSync = [priceChart, rsiChart, macdChart, kdChart, bbwChart];
+
+  // 2026-09新增：2344本益比河流圖，只在有ttmEpsSeries資料時才畫(資料不足時renderPeRiverChartBlock
+  // 已經改顯示空狀態文字、不會有canvas元素，這裡用document.getElementById的存在與否再保險判斷一次)。
+  if(t.cfg.symbol==='2344'){
+    const riverSeries = buildPeRiverSeries(t);
+    const riverCanvas = document.getElementById('perr_'+id);
+    if(riverSeries && riverCanvas){
+      const riverColors = {10:'#8ecae6',14:'#74c69d',18:'#ffd166',22:'#f4a261',26:'#e76f51',30:'#c1121f'};
+      const riverDatasets = riverSeries.multiples.map(m=>({
+        label:`${m}x`, data:riverSeries.bands[m], borderColor:riverColors[m],
+        borderWidth:1.1, pointRadius:0, borderDash:[3,2], fill:false,
+      }));
+      riverDatasets.push({label:'收盤價', data:t.closes, borderColor:'#1d1d1f', borderWidth:1.8, pointRadius:0, fill:false});
+      const peRiverChart = new Chart(riverCanvas, {
+        type:'line',
+        data:{labels:dates, datasets:riverDatasets},
+        options:{...common, scales:{...common.scales, y:{ticks:{font:{size:9}}}}}
+      });
+      chartsToSync.push(peRiverChart);
+    }
+  }
+
+  syncChartsCrosshair(chartsToSync);
 }
 
 function calcPE(symbol){
@@ -2788,12 +3173,18 @@ async function initApp(){
   loadTwseAnalysis(supabaseClient); // TWSE分頁獨立載入，失敗不影響下面15檔標的
   $('loading').style.display='block';
   try{
-    const results = await Promise.all(TICKERS.map(async cfg=>{
-      const raw = await fetchTickerRaw(cfg.symbol);
-      const t = computeTicker(cfg, raw);
-      TICKER_MAP[cfg.symbol]=t;
-      return t;
-    }));
+    // DRAM現貨價格只查一次(不是per-ticker資料，見DRAM_PRICE_ROWS宣告處的說明)，
+    // 跟下面20幾檔標的的查詢平行進行，不會拖慢整體載入時間。
+    const [results, dramRows] = await Promise.all([
+      Promise.all(TICKERS.map(async cfg=>{
+        const raw = await fetchTickerRaw(cfg.symbol);
+        const t = computeTicker(cfg, raw);
+        TICKER_MAP[cfg.symbol]=t;
+        return t;
+      })),
+      fetchDramPriceRows(),
+    ]);
+    DRAM_PRICE_ROWS = dramRows;
     // ^TWII(大盤加權指數，tab:'idx')不是持股，不進summary表格、不進t1-t7的分類群組，
     // 另外獨立渲染成一個完整標的區塊放在總覽頁最上方；但下面的資料日期核對機制仍會
     // 用到它(它也是真實的TW交易日資料，可以當TW資料新鮮度的其中一個參考點)，
