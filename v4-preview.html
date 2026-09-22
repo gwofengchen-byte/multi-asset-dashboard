@@ -261,6 +261,12 @@
   .twse-scenario.bull{background:#eafaf1;border-left:3px solid var(--entry);}
   .twse-scenario.bear{background:#fdecec;border-left:3px solid var(--exit);}
   .twse-scenario .tt{font-weight:700;font-size:13px;margin-bottom:4px;display:block;}
+  /* 大盤本益比(PER)追蹤卡——2026-09-20新增，goodinfo.tw估算值，非TWSE官方逐日數字 */
+  .taiex-per-card{display:flex;align-items:center;flex-wrap:wrap;gap:14px 22px;background:#f7f8fa;border-radius:8px;padding:12px 14px;margin-bottom:18px;}
+  .taiex-per-card .per-item{min-width:90px;}
+  .taiex-per-card .per-item .lbl{font-size:11px;color:var(--sub);display:block;margin-bottom:2px;}
+  .taiex-per-card .per-item .val{font-size:16px;font-weight:700;}
+  .taiex-per-disclaimer{flex-basis:100%;font-size:11px;color:var(--sub);line-height:1.6;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px;}
 </style>
 </head>
 <body>
@@ -335,6 +341,7 @@
 
   <div class="tab-panel active" id="twse-ai">
     <p class="panel-desc">台股加權指數（TAIEX）15步驟技術分析，由「TWSE Technical Analysis AI」專案每個交易日盤後產生：長期/中期/短期趨勢、Market Structure、支撐壓力、K線與圖表型態、量價、MA/EMA/MACD/RSI/KD、型態確認度、歷史案例比對(50型態回測統計庫)、多空情境與交易策略。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論。</p>
+    <div id="taiex-per-body"><div class="twse-empty">大盤本益比資料載入中...</div></div>
     <div id="twse-tab-body"><div class="twse-empty">資料載入中...</div></div>
   </div>
 
@@ -344,6 +351,10 @@
     <h4 style="margin:4px 0 6px;font-size:13.5px;">📊 大盤參考：台股加權指數(TAIEX)</h4>
     <p class="panel-desc" style="margin-top:0;">這不是你的持股，純粹當市場大環境參考，不計入下面的核心/衛星配置，也不會出現在下方的持股總覽表格列。資料來源是yfinance的「^TWII」，跟NVDA/GOOG用同一套已驗證過的抓取流程；技術面指標(EMA/RSI/MACD/KD)、AI訊號、Investment Signal Score都跟個股/ETF用同一套計算邏輯，但下方的「進場/出場觸發條件」文字是通用草案，不是針對大盤特別設計的紀律，僅供參考。</p>
     <div id="detail-index"></div>
+
+    <h4 style="margin:20px 0 6px;font-size:13.5px;">🌐 總經參考：五大科技巨頭資本支出(Google/Amazon/Meta/微軟/甲骨文)</h4>
+    <p class="panel-desc" style="margin-top:0;">這不是你的持股(只有GOOG是)，純粹當AI算力資本支出循環的總經參考指標，不計入核心/衛星配置，也不會出現在下方的持股總覽表格列。資料來源是yfinance季度現金流量表(源自SEC申報，公開資料)，5家公司財年結算月份不同，這裡統一依「日曆季度」重新分組加總，才能公平比較。虛線參考帶是摩根大通《Flows & Liquidity》報告(2026-07-04)對2027年算力支出「斷崖式放緩」的悲觀情境預測，不是官方base case，僅供你目視比對「實際數字」目前跑在樂觀還是悲觀路徑。</p>
+    <div id="hyperscaler-capex-card"></div>
 
     <h4 style="margin:20px 0 6px;font-size:13.5px;">📋 持股總覽</h4>
     <div class="table-scroll">
@@ -1059,6 +1070,9 @@ const TICKER_MAP = {}; // symbol -> 計算後的 t 物件，calcPE() 要用來�
 // fetchTickerRaw()的per-ticker查詢裡(不然20幾檔標的每個都查一次同一張小表，浪費請求)，
 // 改成initApp()裡只查一次存到這個全域變數，2344的監控卡片直接讀這裡。
 let DRAM_PRICE_ROWS = [];
+// 2026-09新增：五大科技巨頭季度資本支出(總經參考指標，不是持股資料)，同樣只查一次存到
+// 這個全域變數，見hyperscaler_capex_quarterly表跟fetch_hyperscaler_capex.py的說明。
+let HYPERSCALER_CAPEX_ROWS = [];
 
 /* ---------- Supabase 連線與設定 ---------- */
 const $ = (id) => document.getElementById(id);
@@ -2040,6 +2054,167 @@ async function fetchDramPriceRows(){
     return [];
   }
 }
+// ============ 五大科技巨頭資本支出(總經參考指標) ============
+// 2026-09新增。跟DRAM_PRICE_ROWS同樣模式：initApp()裡只查一次，不放進per-ticker的
+// fetchTickerRaw()(這5家公司大多不是持股，且是總經層級的參考資料，不屬於任何單一標的)。
+async function fetchHyperscalerCapexRows(){
+  try{
+    const res = await supabaseClient.from('hyperscaler_capex_quarterly').select('ticker,company_name,period_end_date,capex_usd').order('period_end_date',{ascending:true}).limit(200);
+    if(res.error){ console.warn('hyperscaler_capex_quarterly查詢失敗，資本支出卡片將顯示資料不足：', res.error); return []; }
+    return res.data||[];
+  }catch(e){
+    console.warn('hyperscaler_capex_quarterly查詢發生例外，資本支出卡片將顯示資料不足：', e);
+    return [];
+  }
+}
+
+// 把period_end_date換算成「日曆季度」標籤，例如'2026Q3'。5家公司財年結算月份不同
+// (MSFT 6月/ORCL 5月/其餘12月)，用「期末日落在哪個日曆月」判斷日曆季度，而不是沿用
+// 各公司自己的財報Q編號，這樣才能公平地把5家公司同一個日曆季度的資本支出加在一起。
+function calendarQuarterOf(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const y = d.getFullYear();
+  const m = d.getMonth()+1; // 1-12
+  const q = Math.ceil(m/3);
+  return `${y}Q${q}`;
+}
+
+// 摩根大通《Flows & Liquidity》報告(2026-07-04)對五大科技巨頭(含甲骨文)資本支出的
+// 情境預測，單位：億美元。這是報告裡的「悲觀情境(灰犀牛尾端風險)」，不是摩根大通的
+// 官方base case——原始報導明確寫到樂觀情境(營收成長追上支出)才是摩根大通研究傾向支持
+// 的基本情境。這裡只列年度(2026/2027)兩個點，dashboard畫成參考虛線，不代表逐季路徑。
+const JPM_2026_07_BEAR_CASE = {
+  label:'JPM 2026-07 Flows & Liquidity報告悲觀情境(非base case)',
+  points: [
+    {year:2026, totalYi:7581}, // 7,581億美元
+    {year:2027, totalYi:9250}, // 9,250億美元
+  ],
+};
+
+function computeHyperscalerCapexSummary(){
+  const rows = HYPERSCALER_CAPEX_ROWS||[];
+  if(rows.length===0) return null;
+
+  // 先依日曆季度分組，同一季度內把5家公司的capex_usd加總，同時記錄該季實際有幾家公司
+  // 已回報資料(用來提醒「這季資料可能還不完整」，尤其是最新一季，5家財報公布時間本來
+  // 就不同步，不是每季一開始就會有齊5家的數字)。
+  const byQuarter = {}; // '2026Q3' -> {tickers:Set, total:number}
+  rows.forEach(r=>{
+    if(r.capex_usd==null) return;
+    const q = calendarQuarterOf(r.period_end_date);
+    if(!byQuarter[q]) byQuarter[q] = {tickers:new Set(), total:0};
+    byQuarter[q].tickers.add(r.ticker);
+    byQuarter[q].total += Number(r.capex_usd);
+  });
+
+  const quarterKeys = Object.keys(byQuarter).sort(); // 'YYYYQn'字串排序剛好等於時間排序
+  const series = quarterKeys.map(q=>({
+    quarter:q,
+    totalUsd: byQuarter[q].total,
+    tickerCount: byQuarter[q].tickers.size,
+    tickers: Array.from(byQuarter[q].tickers).sort(),
+  }));
+
+  // 移動4季合計(TTM)，近似「年化資本支出」，跟JPM報告的年度數字(7,581億/9,250億)同單位可比較。
+  // 只有連續4季都有資料的點才算，不足4季的最前面幾個點留null，不用不完整的季度硬湊年化數字。
+  const ttm = series.map((s,i)=>{
+    if(i<3) return null;
+    const window = series.slice(i-3,i+1);
+    const sum = window.reduce((acc,w)=>acc+w.totalUsd,0);
+    const minTickerCount = Math.min(...window.map(w=>w.tickerCount));
+    return {quarter:s.quarter, ttmUsd:sum, minTickerCount};
+  });
+
+  // YoY：跟4季前的TTM比較(即前一年同季的年化跑率)
+  const yoy = ttm.map((t,i)=>{
+    if(!t) return null;
+    const prior = i>=4 ? ttm[i-4] : null;
+    if(!prior) return {quarter:t.quarter, pct:null};
+    const pct = prior.ttmUsd ? (t.ttmUsd-prior.ttmUsd)/prior.ttmUsd*100 : null;
+    return {quarter:t.quarter, pct};
+  });
+
+  return {series, ttm, yoy};
+}
+
+function fmtYi(usd){ // 美元 -> 億美元字串，跟你查證JPM報告時用的單位一致，方便直接比對
+  if(usd==null) return '--';
+  return (usd/1e8).toFixed(0);
+}
+
+function renderHyperscalerCapexCard(){
+  const summary = computeHyperscalerCapexSummary();
+  if(!summary || summary.series.length===0){
+    return `<div class="ai-score-card"><div class="score-empty">尚無hyperscaler_capex_quarterly資料，main.py要先成功執行過「五大科技巨頭資本支出」步驟才會有內容。</div></div>`;
+  }
+  const {series, ttm, yoy} = summary;
+  const lastIdx = series.length-1;
+  const lastTtm = ttm[lastIdx];
+  const lastYoy = yoy[lastIdx];
+  const lastQuarter = series[lastIdx];
+
+  const latestLine = lastTtm
+    ? `最新TTM(移動4季)年化資本支出：約${fmtYi(lastTtm.ttmUsd)}億美元(截至${lastTtm.quarter})${lastTtm.minTickerCount<5?`　⚠️ 這4季裡有季度只有${lastTtm.minTickerCount}/5家公司已回報資料，數字可能被低估`:''}`
+    : `資料仍在累積中，需要連續4個日曆季度都有資料才能算出移動4季年化資本支出(目前有${series.length}季)`;
+  const yoyLine = (lastTtm && lastYoy && lastYoy.pct!=null)
+    ? `年增率：${lastYoy.pct>=0?'+':''}${lastYoy.pct.toFixed(1)}%（對照JPM悲觀情境：2026年估+100%、2027年估驟降至+22%、之後7%→2%→1%——這裡算出來的是「實際申報數字」的年增率，不是預測值）`
+    : `年增率：資料不足(需要前一年同季度也有完整TTM才能算)`;
+  const latestQuarterNote = `最新一季(${lastQuarter.quarter})已回報：${lastQuarter.tickers.join('、')}（${lastQuarter.tickerCount}/5家）；資本支出合計約${fmtYi(lastQuarter.totalUsd)}億美元。5家公司財報公布時間本來就不同步，一開始沒有湊齊5家是正常現象，通常下一季會補齊。`;
+
+  return `
+  <div class="ai-score-card">
+    <div class="ai-verdict-title">🌐 五大科技巨頭資本支出追蹤（總經參考，非持股）</div>
+    <canvas id="capex_macro_chart" height="90"></canvas>
+    <div class="score-note" style="margin-left:0;margin-top:8px;">${latestLine}</div>
+    <div class="score-note" style="margin-left:0;">${yoyLine}</div>
+    <div class="score-note" style="margin-left:0;">${latestQuarterNote}</div>
+    <div class="score-note" style="margin-left:0;">圖上虛線是${JPM_2026_07_BEAR_CASE.label}，僅供對照，不是官方預測，實際數字持續高於或低於這條線都不代表已經驗證或推翻該情境，需要累積更多季度資料再判斷。</div>
+  </div>`;
+}
+
+function buildHyperscalerCapexChart(){
+  const canvas = document.getElementById('capex_macro_chart');
+  if(!canvas) return; // 資料不足時renderHyperscalerCapexCard()不會產生canvas，這裡保險再判斷一次
+  const summary = computeHyperscalerCapexSummary();
+  if(!summary || summary.series.length===0) return;
+  const {series, ttm} = summary;
+
+  const labels = series.map(s=>s.quarter);
+  const ttmYiSeries = ttm.map(t=>t? Number(fmtYi(t.ttmUsd)) : null);
+
+  // JPM悲觀情境參考線：只在2026/2027兩個年度末的日曆季度(Q4)標出參考值，其餘為null，
+  // 讓圖上只出現兩個點+之間的連線，不會誤導成「逐季都照這個情境走」的精確路徑。
+  const bearLine = labels.map(q=>{
+    const m = /^(\d{4})Q4$/.exec(q);
+    if(!m) return null;
+    const year = parseInt(m[1],10);
+    const pt = JPM_2026_07_BEAR_CASE.points.find(p=>p.year===year);
+    return pt ? pt.totalYi : null;
+  });
+  const hasBearRef = bearLine.some(v=>v!=null);
+
+  const datasets = [
+    {label:'移動4季年化資本支出(億美元)', data:ttmYiSeries, borderColor:'#2b7fd9', backgroundColor:'rgba(43,127,217,0.08)', borderWidth:2, pointRadius:2, fill:true, spanGaps:true},
+  ];
+  if(hasBearRef){
+    datasets.push({label:JPM_2026_07_BEAR_CASE.label, data:bearLine, borderColor:'#d9363e', borderWidth:1.3, borderDash:[5,4], pointRadius:3, pointStyle:'rectRot', fill:false, spanGaps:true});
+  }
+
+  new Chart(canvas, {
+    type:'line',
+    data:{labels, datasets},
+    options:{
+      responsive:true, animation:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10}}}},
+      scales:{
+        x:{ticks:{maxTicksLimit:10,font:{size:9}},grid:{display:false}},
+        y:{ticks:{font:{size:9},callback:(v)=>v+'億'}},
+      },
+    },
+  });
+}
+
 function computeDramAspSignal(item){
   const rows = (DRAM_PRICE_ROWS||[]).filter(r=>r.item===item).slice().sort((a,b)=>a.record_date<b.record_date?1:-1); // desc
   if(rows.length===0) return null;
@@ -2969,6 +3144,49 @@ function renderTwseAnalysis(row){
   return hasNewSchema ? renderTwseAnalysisV2(d, row) : renderTwseAnalysisV1(d, row);
 }
 
+/* ---- 大盤本益比(PER)追蹤卡——2026-09-20新增 ----
+   資料來源goodinfo.tw本益比河流圖頁面的估算值，不是TWSE官方逐日數字(TWSE官方只有
+   月頻統計月報)；這裡跟下面的15步驟技術分析完全獨立查詢/獨立渲染，失敗不影響彼此。 */
+async function loadTaiexPER(client){
+  const body = document.getElementById('taiex-per-body');
+  if(!body) return;
+  try{
+    const {data, error} = await client
+      .from('taiex_valuation_daily')
+      .select('trade_date, index_price, per, source, fetched_at')
+      .order('trade_date', {ascending:false})
+      .limit(1);
+    if(error) throw error;
+    if(!data || data.length===0){
+      body.innerHTML = '<div class="twse-empty">尚無大盤本益比資料——本機排程任務還沒有寫入第一筆，或taiex_valuation_daily資料表尚未建立。這不影響上面的15步驟技術分析。</div>';
+      return;
+    }
+    body.innerHTML = renderTaiexPER(data[0]);
+  }catch(e){
+    body.innerHTML = `<div class="twse-empty">大盤本益比資料載入失敗：${twseEsc(e.message||e)}<br>（不影響上面的15步驟技術分析，若剛設定好排程還沒執行過，這是正常現象。）</div>`;
+  }
+}
+function renderTaiexPER(row){
+  const price = Number(row.index_price);
+  const per = Number(row.per);
+  return `
+    <div class="taiex-per-card">
+      <div class="per-item">
+        <span class="lbl">資料日期</span>
+        <span class="val">${twseEsc(row.trade_date)}</span>
+      </div>
+      <div class="per-item">
+        <span class="lbl">加權指數收盤</span>
+        <span class="val">${Number.isFinite(price)?price.toLocaleString():'--'}</span>
+      </div>
+      <div class="per-item">
+        <span class="lbl">大盤本益比(PER)</span>
+        <span class="val">${Number.isFinite(per)?twseNum(per,2)+' 倍':'--'}</span>
+      </div>
+      <div class="taiex-per-disclaimer">⚠️ 此為第三方估算值（來源：${twseEsc(row.source||'goodinfo.tw')}），非證交所(TWSE)官方逐日公告數字——TWSE官方僅提供每月一次的大盤本益比統計月報，沒有逐日資料，僅供參考，不作為投資建議。</div>
+    </div>`;
+}
+
 /* ---- 舊版schema（v3 Instructions產出，無steps/pipeline/scenarios時的相容渲染） ---- */
 function renderTwseAnalysisV1(d, row){
   const change = Number(d.change);
@@ -3187,11 +3405,12 @@ async function initApp(){
   $('input-url').value=url; $('input-key').value=key;
   supabaseClient = window.supabase.createClient(url,key);
   loadTwseAnalysis(supabaseClient); // TWSE分頁獨立載入，失敗不影響下面15檔標的
+  loadTaiexPER(supabaseClient); // 大盤本益比獨立載入，2026-09-20新增，失敗不影響上面15步驟分析
   $('loading').style.display='block';
   try{
-    // DRAM現貨價格只查一次(不是per-ticker資料，見DRAM_PRICE_ROWS宣告處的說明)，
+    // DRAM現貨價格、五大科技巨頭資本支出都只查一次(不是per-ticker資料)，
     // 跟下面20幾檔標的的查詢平行進行，不會拖慢整體載入時間。
-    const [results, dramRows] = await Promise.all([
+    const [results, dramRows, capexRows] = await Promise.all([
       Promise.all(TICKERS.map(async cfg=>{
         const raw = await fetchTickerRaw(cfg.symbol);
         const t = computeTicker(cfg, raw);
@@ -3199,8 +3418,10 @@ async function initApp(){
         return t;
       })),
       fetchDramPriceRows(),
+      fetchHyperscalerCapexRows(),
     ]);
     DRAM_PRICE_ROWS = dramRows;
+    HYPERSCALER_CAPEX_ROWS = capexRows;
     // ^TWII(大盤加權指數，tab:'idx')不是持股，不進summary表格、不進t1-t7的分類群組，
     // 另外獨立渲染成一個完整標的區塊放在總覽頁最上方；但下面的資料日期核對機制仍會
     // 用到它(它也是真實的TW交易日資料，可以當TW資料新鮮度的其中一個參考點)，
@@ -3211,6 +3432,10 @@ async function initApp(){
     const groups={t1:[],t2:[],t3:[],t4:[],t5:[],t6:[],t7:[],t8:[]};
     portfolioResults.forEach(t=>groups[t.cfg.tab].push(t));
     renderOverview(portfolioResults);
+    // 2026-09新增：五大科技巨頭資本支出卡片，先塞HTML(含canvas)，DOM插入後再建Chart.js實例
+    // (跟per-ticker圖表同樣的兩段式流程：renderXxx()回傳字串→插入innerHTML→buildXxx()才抓得到canvas)。
+    $('hyperscaler-capex-card').innerHTML = renderHyperscalerCapexCard();
+    buildHyperscalerCapexChart();
     Object.keys(groups).forEach(tab=>renderTab(tab, groups[tab]));
     if(indexTicker) renderIndexSection(indexTicker);
 
