@@ -267,6 +267,16 @@
   .taiex-per-card .per-item .lbl{font-size:11px;color:var(--sub);display:block;margin-bottom:2px;}
   .taiex-per-card .per-item .val{font-size:16px;font-weight:700;}
   .taiex-per-disclaimer{flex-basis:100%;font-size:11px;color:var(--sub);line-height:1.6;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px;}
+  /* 均線糾結後帶量向上突破——全市場篩選候選清單，2026-09-29新增 */
+  .ma-breakout-section{margin-bottom:18px;}
+  .ma-breakout-title{font-size:13.5px;font-weight:700;margin:0 0 6px;}
+  .ma-breakout-meta{font-size:11px;color:var(--sub);margin-bottom:8px;}
+  .tier-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .tier-badge.tier-A{background:#eafaf1;color:var(--entry);}
+  .tier-badge.tier-B{background:#fff4e5;color:#a15c00;}
+  .tier-badge.tier-C{background:#eaf2fd;color:#1d5fb8;}
+  table.mini td.mono{font-variant-numeric:tabular-nums;}
+  .ma-breakout-disclaimer{font-size:11px;color:var(--sub);line-height:1.6;border-top:1px dashed var(--border);padding-top:8px;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -342,6 +352,7 @@
   <div class="tab-panel active" id="twse-ai">
     <p class="panel-desc">台股加權指數（TAIEX）15步驟技術分析，由「TWSE Technical Analysis AI」專案每個交易日盤後產生：長期/中期/短期趨勢、Market Structure、支撐壓力、K線與圖表型態、量價、MA/EMA/MACD/RSI/KD、型態確認度、歷史案例比對(50型態回測統計庫)、多空情境與交易策略。所有結論皆需通過量化回測驗證，禁止僅憑單一指標下結論。</p>
     <div id="taiex-per-body"><div class="twse-empty">大盤本益比資料載入中...</div></div>
+    <div id="ma-breakout-body"><div class="twse-empty">均線糾結突破候選名單載入中...</div></div>
     <div id="twse-tab-body"><div class="twse-empty">資料載入中...</div></div>
   </div>
 
@@ -3187,6 +3198,85 @@ function renderTaiexPER(row){
     </div>`;
 }
 
+/* ---- 均線糾結後帶量向上突破——全市場(上市+上櫃)篩選候選清單，2026-09-29新增 ----
+   資料來源：Supabase的ma_breakout_scan_daily表，main.py每個交易日盤後由
+   scan_ma_breakout.py寫入當天TOP20(A/B/C分級)。跟上面15步驟分析、大盤本益比一樣
+   獨立查詢/獨立渲染，失敗不影響彼此。這裡只呈現量化規則篩選出的分數與分級，
+   Project instructions第十節要求的9題AI質化分析(為什麼被選出/爆量出貨疑慮等)
+   刻意不在這裡自動產生，想深入了解特定候選股請直接在Cowork對話裡問Claude。 */
+async function loadMaBreakoutScan(client){
+  const body = document.getElementById('ma-breakout-body');
+  if(!body) return;
+  try{
+    const {data:latestRows, error:e1} = await client
+      .from('ma_breakout_scan_daily')
+      .select('scan_date')
+      .order('scan_date', {ascending:false})
+      .limit(1);
+    if(e1) throw e1;
+    if(!latestRows || latestRows.length===0){
+      body.innerHTML = '<div class="twse-empty">尚無均線糾結突破篩選資料——main.py還沒執行過新版排程，或ma_breakout_scan_daily資料表尚未建立。這不影響上面的15步驟技術分析與大盤本益比。</div>';
+      return;
+    }
+    const scanDate = latestRows[0].scan_date;
+    const {data, error:e2} = await client
+      .from('ma_breakout_scan_daily')
+      .select('stock_id, stock_name, market, tier, rank, score, close, change_pct, compression_pct, volume_ratio, volume_flag, dist_from_20d_high_pct, candle_strength, ma_alignment, breakout_20d_high')
+      .eq('scan_date', scanDate)
+      .order('rank', {ascending:true});
+    if(e2) throw e2;
+    body.innerHTML = renderMaBreakoutScan(scanDate, data||[]);
+  }catch(e){
+    body.innerHTML = `<div class="twse-empty">均線糾結突破篩選資料載入失敗：${twseEsc(e.message||e)}<br>（不影響上面的15步驟技術分析與大盤本益比，若剛設定好排程還沒執行過，這是正常現象。）</div>`;
+  }
+}
+function renderMaBreakoutScan(scanDate, rows){
+  if(!rows.length){
+    return `<div class="ma-breakout-section">
+      <div class="ma-breakout-title">📈 均線糾結後帶量向上突破——全市場候選名單</div>
+      <div class="twse-empty">${twseEsc(scanDate)}沒有符合條件的候選股（不代表程式出錯，可能單純當天市場沒有符合這個型態的標的）。</div>
+    </div>`;
+  }
+  const tierLabel = {A:'🟢A 突破確認', B:'🟡B 突破進行中', C:'🔵C 即將突破'};
+  const tr = rows.map(r=>{
+    const chg = Number(r.change_pct);
+    const chgStr = Number.isFinite(chg) ? `${chg>=0?'+':''}${twseNum(chg,2)}%` : '--';
+    const chgCls = Number.isFinite(chg) ? (chg>=0?'up':'down') : '';
+    return `<tr>
+      <td>${twseEsc(r.rank)}</td>
+      <td><span class="tier-badge tier-${twseEsc(r.tier)}">${twseEsc(r.tier)}</span></td>
+      <td>${twseEsc(r.stock_id)} ${twseEsc(r.stock_name||'')}</td>
+      <td class="mono">${twseEsc(r.market)}</td>
+      <td class="mono">${twseNum(r.score,1)}</td>
+      <td class="mono">${twseNum(r.close,2)}</td>
+      <td class="mono ${chgCls}">${chgStr}</td>
+      <td class="mono">${twseNum(r.compression_pct,2)}%</td>
+      <td class="mono">${twseNum(r.volume_ratio,2)}x</td>
+      <td>${twseEsc(r.volume_flag)}</td>
+      <td class="mono">${r.dist_from_20d_high_pct!=null?twseNum(r.dist_from_20d_high_pct,2)+'%':'--'}</td>
+      <td class="mono">${twseNum(r.candle_strength,2)}</td>
+      <td>${r.breakout_20d_high?'✅':''}${r.ma_alignment?' MA多排':''}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="ma-breakout-section">
+    <div class="ma-breakout-title">📈 均線糾結後帶量向上突破——全市場候選名單</div>
+    <div class="ma-breakout-meta">資料日期 ${twseEsc(scanDate)}｜量化規則篩選(均線糾結/突破/量價/K棒/趨勢/大盤環境，100分制)，
+      TOP${rows.length}｜🟢A突破確認　🟡B突破進行中　🔵C即將突破</div>
+    <div class="table-scroll">
+    <table class="mini">
+      <thead><tr>
+        <th>排名</th><th>級別</th><th>股票</th><th>市場</th><th>分數</th><th>收盤</th><th>漲跌%</th>
+        <th>均線壓縮</th><th>量比</th><th>量能</th><th>距20日高</th><th>K棒強度</th><th>備註</th>
+      </tr></thead>
+      <tbody>${tr}</tbody>
+    </table>
+    </div>
+    <div class="ma-breakout-disclaimer">⚠️ 以上是量化規則篩選出的候選名單，不是買賣建議，也不包含質化分析(爆量出貨疑慮/下一個支撐壓力等)——
+      想深入了解特定候選股，直接在Cowork對話裡問Claude即可。每一檔實際進出場仍須自行確認觸發/確認/失效條件與風險，
+      禁止僅憑本表單一分數做買賣決策。</div>
+  </div>`;
+}
+
 /* ---- 舊版schema（v3 Instructions產出，無steps/pipeline/scenarios時的相容渲染） ---- */
 function renderTwseAnalysisV1(d, row){
   const change = Number(d.change);
@@ -3406,6 +3496,7 @@ async function initApp(){
   supabaseClient = window.supabase.createClient(url,key);
   loadTwseAnalysis(supabaseClient); // TWSE分頁獨立載入，失敗不影響下面15檔標的
   loadTaiexPER(supabaseClient); // 大盤本益比獨立載入，2026-09-20新增，失敗不影響上面15步驟分析
+  loadMaBreakoutScan(supabaseClient); // 均線糾結突破候選名單獨立載入，2026-09-29新增，失敗不影響其他區塊
   $('loading').style.display='block';
   try{
     // DRAM現貨價格、五大科技巨頭資本支出都只查一次(不是per-ticker資料)，
