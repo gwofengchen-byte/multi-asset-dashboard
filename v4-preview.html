@@ -370,7 +370,7 @@
     <h4 style="margin:20px 0 6px;font-size:13.5px;">📋 持股總覽</h4>
     <div class="table-scroll">
     <table class="summary">
-      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
+      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
       <tbody id="sum-t0"></tbody>
     </table>
     </div>
@@ -379,56 +379,56 @@
   <div class="tab-panel" id="t1">
     <p class="panel-desc">核心部位(1)：指數型ETF——回答「大盤曝險有沒有走偏」，不是「今天要不要買賣」。技術圖表(價格/EMA/20日高低、RSI、MACD、KD)與折溢價率皆為真實資料；內扣費用率、成分集中度等欄位為手動維護的參考文字。</p>
     <div class="jumpnav" id="jump-t1"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>季線/年線</th></tr></thead><tbody id="sum-t1"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>季線/年線</th></tr></thead><tbody id="sum-t1"></tbody></table>
     <div id="detail-t1"></div>
   </div>
 
   <div class="tab-panel" id="t2">
     <p class="panel-desc">核心部位(2)：高股息ETF——回答「配息穩不穩、成分股邏輯有沒有變質」。折溢價與填息天數為真實資料（填息天數取自最近幾次除息紀錄的平均值）。</p>
     <div class="jumpnav" id="jump-t2"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t2"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t2"></tbody></table>
     <div id="detail-t2"></div>
   </div>
 
   <div class="tab-panel" id="t3">
     <p class="panel-desc">核心部位(3)：金融股——技術面／籌碼面為真實資料；NIM、資本適足率、每股淨值、ROE 待補資料源，先留空。</p>
     <div class="jumpnav" id="jump-t3"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>三大法人(近日)</th><th>NIM</th></tr></thead><tbody id="sum-t3"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>三大法人(近日)</th><th>NIM</th></tr></thead><tbody id="sum-t3"></tbody></table>
     <div id="detail-t3"></div>
   </div>
 
   <div class="tab-panel" id="t7">
     <p class="panel-desc">核心部位(4)：債券型ETF——都是台股上市、美元計價的美國公債／投資級公司債ETF，回答「利率環境有沒有變、存續期間曝險是否過大」，不是「今天要不要買賣」。技術面、折溢價、填息天數為真實資料；存續期間、信用評級等欄位目前沒有自動化資料源，先留空或手動維護。這4檔的「進場/出場」邏輯本質上是看利率循環，跟股票型ETF的技術面邏輯不完全對等，草案規則僅供參考。</p>
     <div class="jumpnav" id="jump-t7"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t7"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>平均填息天數</th></tr></thead><tbody id="sum-t7"></tbody></table>
     <div id="detail-t7"></div>
   </div>
 
   <div class="tab-panel" id="t4">
     <p class="panel-desc">衛星持股(1)：個股型——技術面、籌碼面、財報面、現金流量表、PE歷史百分位評價模型皆為真實資料；分析師目標價需你自己到Supabase Table Editor的analyst_estimates表手動維護。新標的(5434)歷史資料仍在累積中，PE百分位等需要較長歷史的欄位可能會顯示「資料不足」。</p>
     <div class="jumpnav" id="jump-t4"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t4"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t4"></tbody></table>
     <div id="detail-t4"></div>
   </div>
 
   <div class="tab-panel" id="t5">
     <p class="panel-desc">衛星持股(2)：海外ETF型——折溢價為真實資料；新增「海外對標」欄位，用可交易的美股ETF(VOO/QQQ/VNM)當代理價格，取代抓不到的原始指數本身，兩者有追蹤誤差與匯率落差，僅供方向性參考。衛星額度與 Tab4 共用同一個10%上限。</p>
     <div class="jumpnav" id="jump-t5"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>海外對標</th></tr></thead><tbody id="sum-t5"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>折溢價</th><th>海外對標</th></tr></thead><tbody id="sum-t5"></tbody></table>
     <div id="detail-t5"></div>
   </div>
 
   <div class="tab-panel" id="t6">
     <p class="panel-desc">衛星持股(3)：海外個股型——目前是NVDA(輝達)、GOOG(Alphabet)兩檔美股個股。技術面(價格/EMA/RSI/MACD/KD)為真實資料(來源yfinance)；機構持股表也是真實資料，但只有Yahoo揭露的「前10大機構+前10大基金」，屬季度性質，不是完整13F清單，也不是每日更新。台股沒有的「三大法人每日買賣超」這個資料，美股沒有對應資料源，這裡不會出現。價格為美元計價，跟其他分類頁的台幣計價不能直接相加比較。這兩檔的技術面資料日期是美股自己的交易日，跟台股資料日期不同步，屬正常時差，請看上方「美股資料日期」欄位。</p>
     <div class="jumpnav" id="jump-t6"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤(USD)</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>最大機構持股</th><th>機構持股申報季度</th></tr></thead><tbody id="sum-t6"></tbody></table>
     <div id="detail-t6"></div>
   </div>
 
   <div class="tab-panel" id="t8">
     <p class="panel-desc">衛星持股(4)：趨勢成長股——2344(華邦電)、2404(漢唐)、2317(鴻海)三檔台股個股，跟衛星(1)個股型(2330/5434)性質相同，都是走完整的個股深度分析(技術面/籌碼面/財報面/現金流量表/PE歷史百分位評價模型)，只是獨立成第4個衛星分類方便你分開檢視這幾檔「趨勢成長」邏輯的持股。衛星額度與Tab4/Tab5共用同一個10%總上限，不是額外多10%。</p>
     <div class="jumpnav" id="jump-t8"></div>
-    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t8"></tbody></table>
+    <table class="summary"><thead><tr><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>PE百分位</th><th>衛星額度佔用</th></tr></thead><tbody id="sum-t8"></tbody></table>
     <div id="detail-t8"></div>
   </div>
 
@@ -706,6 +706,27 @@ const TICKERS = [
    `屬主動式管理基金，非被動指數，波動度與換手率預期較高`,
    t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
    `建議先確認要維持核心分類、或改列衛星，觸發規則會因此不同`
+ ]},
+
+{tab:'t1',symbol:'00992A',name:'群益台灣科技創新主動式', flag:'主動式／主題集中',
+ staticFields:[['基金性質','主動式管理，無追蹤指數；質量化並重選股，聚焦台股科技創新題材（手動維護）'],['成立日期','2025-12-16（上市時間短，歷史資料有限）'],['配息','季配（手動維護）']],
+ entryRule:'折溢價<-0.5%，且站上EMA20/60；因屬主動式科技主題，不設加碼條件以外的核心配置假設',
+ exitRule:'跌破EMA60時減碼（比照主動式基金/衛星規則）；折溢價>+1%不追買',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `主動式科技創新ETF，成分集中於科技題材，波動度高於全市場型指數，與0050/006208重疊度需自行確認`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   `2025-12才成立，歷史資料短，RSI/EMA60等長週期指標參考性較低`
+ ]},
+{tab:'t1',symbol:'00927',name:'群益半導體收益', flag:'主題式／半導體集中',
+ staticFields:[['追蹤指數','特選臺灣上市上櫃半導體收益指數（手動維護）'],['選股邏輯','半導體母體→流動性篩選→近4季ROE>0→股利指標排序取30檔（手動維護）'],['上市日期','2023-06-06']],
+ entryRule:'折溢價<-0.5%，且站上EMA20/60；半導體景氣循環敏感，需搭配產業面確認',
+ exitRule:'跌破年線，或折溢價>+1%，或半導體族群集中度過高警示',
+ peModel:{defaultEps:null},
+ advice:t=>[
+   `主題式ETF，僅投資台灣半導體產業，產業集中度高，非全市場型指數`,
+   t.premiumDiscount!=null?`折溢價${t.premiumDiscount.toFixed(2)}%（${t.pdDate}）`:'折溢價資料尚未取得',
+   `與台積電權重高的0050/006208成分重疊，核心配置合計曝險建議定期檢視`
  ]},
 
 {tab:'t2',symbol:'00878',name:'國泰永續高股息',
@@ -1627,6 +1648,32 @@ function computeWarningSignals(t){
 }
 
 /* ---------- 渲染 ---------- */
+/* 日KD(9,3,3)狀態：K/D數值 + 簡短狀態標籤。
+   狀態判斷順序：今日剛交叉(金叉/死叉，比對昨日K與D大小關係是否翻轉)優先，
+   其次才看K值位置(>80高檔/<20低檔)，最後才是單純K>D(偏多)或K<D(偏空)。
+   跟既有訊號矩陣用同一組kdSeries結果(t.kd)，不另外重算，避免兩邊數字不一致。
+   資料不足(K或D為null)時回傳null，呼叫端顯示「--」。 */
+function kdStatus(t){
+  if(!t || !t.kd || !t.kd.k || !t.kd.d) return null;
+  const n=t.kd.k.length, i=n-1, y=n-2;
+  const k=t.kd.k[i], d=t.kd.d[i];
+  if(k==null || d==null) return null;
+  const kY = y>=0 ? t.kd.k[y] : null, dY = y>=0 ? t.kd.d[y] : null;
+  let label, cls;
+  if(kY!=null && dY!=null && kY<=dY && k>d){ label='金叉'; cls='up'; }
+  else if(kY!=null && dY!=null && kY>=dY && k<d){ label='死叉'; cls='down'; }
+  else if(k>80){ label='高檔'; cls='down'; }
+  else if(k<20){ label='低檔'; cls='up'; }
+  else if(k>d){ label='K大於D偏多'; cls='up'; }
+  else { label='K小於D偏空'; cls='down'; }
+  return {k, d, label, cls};
+}
+function kdCellHtml(t){
+  const s=kdStatus(t);
+  if(!s) return '<span style="color:#9aa0a8">--</span>';
+  return `K${s.k.toFixed(1)}／D${s.d.toFixed(1)}<br><span class="${s.cls}" style="font-size:11px;">${s.label}</span>`;
+}
+
 function overviewExtraCols(t){
   // 總覽表最右兩欄：依各分類顯示較有用的重點指標(標籤+數值)，取代原本的進場/出場條件文字
   const tab = t.cfg.tab;
@@ -2631,6 +2678,7 @@ function renderOverview(list){
       <td class="nowrap">${t.insufficient?'資料累積中':priceFmt(t)}</td>
       <td class="nowrap">${t.insufficient?'--':pctBadge(t.pct)}</td>
       <td class="nowrap">${t.insufficient?'--':fmt(t.rsi,1)}</td>
+      <td class="nowrap">${t.insufficient?'--':kdCellHtml(t)}</td>
       <td class="nowrap">${trig}</td>
       <td class="nowrap">${aiSig}</td>
       <td class="nowrap">${scoreBadge}</td>
@@ -2686,7 +2734,7 @@ function renderTab(tab, list){
     return `<tr>
       <td>${t.cfg.symbol}</td><td>${t.cfg.name}${t.cfg.flag?`<span class="flag">${t.cfg.flag}</span>`:''}</td>
       <td>${t.insufficient?'資料累積中':priceFmt(t)}</td><td>${t.insufficient?'--':pctBadge(t.pct)}</td>
-      <td>${t.insufficient?'--':fmt(t.rsi,1)}</td><td>${trig}</td>
+      <td>${t.insufficient?'--':fmt(t.rsi,1)}</td><td>${t.insufficient?'--':kdCellHtml(t)}</td><td>${trig}</td>
       <td>${aiSig}</td>
       <td>${scoreBadge}</td>
       <td>${extra[0]}</td><td>${extra[1]}</td>
@@ -2834,6 +2882,7 @@ function renderStockSection(t, tab){
       <div class="tech-cell"><div class="lbl">收盤${isUSD?'(USD)':''}</div><div class="val">${priceFmt(t)}</div></div>
       <div class="tech-cell"><div class="lbl">漲跌幅</div><div class="val">${pctBadge(t.pct)}</div></div>
       <div class="tech-cell"><div class="lbl">RSI(14)</div><div class="val">${fmt(t.rsi,1)}</div></div>
+      <div class="tech-cell"><div class="lbl">日KD(9,3,3)</div><div class="val" style="font-size:13px">${(()=>{const s=kdStatus(t);return s?`K${s.k.toFixed(1)} ／ D${s.d.toFixed(1)}`:'--';})()}</div><div class="note">${(()=>{const s=kdStatus(t);return s?`<span class="${s.cls}">${s.label}</span>`:'資料累積中';})()}</div></div>
       <div class="tech-cell"><div class="lbl">EMA20</div><div class="val">${priceFmtV(t,t.ema20v,2)}</div><div class="note">${t.ema20v!=null?(t.price>=t.ema20v?'價在上方':'價在下方'):'資料累積中'}</div></div>
       <div class="tech-cell"><div class="lbl">EMA60</div><div class="val">${priceFmtV(t,t.ema60v,2)}</div><div class="note">${t.ema60v!=null?(t.price>=t.ema60v?'價在上方':'價在下方'):'資料累積中(需60個交易日)'}</div></div>
       <div class="tech-cell"><div class="lbl">前20日高</div><div class="val">${priceFmtV(t,t.h20v,2)}</div></div>
