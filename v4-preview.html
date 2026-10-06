@@ -370,7 +370,7 @@
     <h4 style="margin:20px 0 6px;font-size:13.5px;">📋 持股總覽</h4>
     <div class="table-scroll">
     <table class="summary">
-      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>RSI(14)</th><th>日KD</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
+      <thead><tr><th>分類</th><th>代碼</th><th>名稱</th><th>收盤</th><th>漲跌幅</th><th>日KD</th><th>本日觸發</th><th>AI訊號🤖</th><th>Score🎯</th><th>重點指標①</th><th>重點指標②</th><th></th></tr></thead>
       <tbody id="sum-t0"></tbody>
     </table>
     </div>
@@ -2677,7 +2677,6 @@ function renderOverview(list){
       <td class="nowrap">${cfg.name}${cfg.flag?`<span class="flag">${cfg.flag}</span>`:''}</td>
       <td class="nowrap">${t.insufficient?'資料累積中':priceFmt(t)}</td>
       <td class="nowrap">${t.insufficient?'--':pctBadge(t.pct)}</td>
-      <td class="nowrap">${t.insufficient?'--':fmt(t.rsi,1)}</td>
       <td class="nowrap">${t.insufficient?'--':kdCellHtml(t)}</td>
       <td class="nowrap">${trig}</td>
       <td class="nowrap">${aiSig}</td>
